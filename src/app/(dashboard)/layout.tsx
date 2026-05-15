@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { useAppStore } from '@/store/useAppStore'
 import Sidebar from '@/components/layout/Sidebar'
 import MobileNav from '@/components/layout/MobileNav'
@@ -13,8 +14,9 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const { status } = useSession()
 
-  const { isLoggedIn, sidebarOpen } = useAppStore()
+  const { isLoggedIn, sidebarOpen, hydrateFromDatabase, setAuthUser } = useAppStore()
 
   const [mounted, setMounted] = useState(false)
 
@@ -23,12 +25,35 @@ export default function DashboardLayout({
   }, [])
 
   useEffect(() => {
-    if (mounted && !isLoggedIn) {
+    if (mounted && status === 'unauthenticated') {
+      setAuthUser(null)
       router.replace('/login')
     }
-  }, [isLoggedIn, mounted, router])
+  }, [mounted, router, setAuthUser, status])
 
-  if (!mounted) {
+  useEffect(() => {
+    if (!mounted || status !== 'authenticated') return
+
+    let active = true
+
+    fetch('/api/bootstrap')
+      .then((response) => {
+        if (!response.ok) throw new Error('Gagal memuat data SIMONPRO')
+        return response.json()
+      })
+      .then((data) => {
+        if (active) hydrateFromDatabase(data)
+      })
+      .catch(() => {
+        if (active) setAuthUser(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [hydrateFromDatabase, mounted, setAuthUser, status])
+
+  if (!mounted || status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-100">
         <div className="text-center">
@@ -48,7 +73,7 @@ export default function DashboardLayout({
     )
   }
 
-  if (!isLoggedIn) {
+  if (status !== 'authenticated' || !isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-100">
         <div className="text-center">
@@ -80,22 +105,12 @@ export default function DashboardLayout({
       <MobileNav />
 
       <main
-        className="transition-all duration-300 min-h-screen pb-16 md:pb-0"
+        className="app-main transition-all duration-300 min-h-screen pb-20 md:pb-0"
         style={{
-          marginLeft: 0,
+          ['--sidebar-left' as string]: `${sidebarOpen ? 210 : 60}px`,
           paddingTop: 56,
         }}
       >
-
-        <style>{`
-          @media (min-width: 768px) {
-            main {
-              margin-left: ${
-                sidebarOpen ? 210 : 60
-              }px !important;
-            }
-          }
-        `}</style>
 
         {children}
 

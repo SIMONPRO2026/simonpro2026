@@ -53,9 +53,9 @@ function ChatContent() {
   const totalUnread = projects.reduce((s, p) => s + p.chat.length, 0)
 
   return (
-    <div className="flex h-[calc(100vh-56px)]">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-56px)]">
       {/* Left sidebar - Project list */}
-      <div className="w-64 bg-white border-r border-slate-100 flex flex-col flex-shrink-0">
+      <div className="w-full md:w-64 max-h-56 md:max-h-none bg-white border-b md:border-b-0 md:border-r border-slate-100 flex flex-col flex-shrink-0">
         <div className="p-3 border-b border-slate-100">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
@@ -98,7 +98,7 @@ function ChatContent() {
         </div>
 
         {/* Bottom user info */}
-        <div className="p-3 border-t border-slate-100 bg-slate-50">
+        <div className="hidden md:block p-3 border-t border-slate-100 bg-slate-50">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
               {getInitials(currentUser?.name || 'U')}
@@ -112,13 +112,13 @@ function ChatContent() {
       </div>
 
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-slate-50">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-slate-50">
         {proyek ? (
           <>
             {/* Chat header */}
-            <div className="bg-white border-b border-slate-100 px-5 py-3 flex items-center justify-between flex-shrink-0">
-              <div>
-                <div className="font-bold text-slate-800 text-sm">{proyek.nama}</div>
+            <div className="bg-white border-b border-slate-100 px-5 py-3 flex flex-wrap items-start justify-between gap-2 flex-shrink-0">
+              <div className="min-w-0">
+                <div className="font-bold text-slate-800 text-sm leading-snug break-words">{proyek.nama}</div>
                 <div className="text-xs text-slate-400">{proyek.kode} · {proyek.chat.length} pesan</div>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -154,7 +154,7 @@ function ChatContent() {
                         </div>
                       )}
 
-                      <div className={`flex flex-col max-w-[65%] ${isMe ? 'items-end' : 'items-start'}`}>
+                      <div className={`flex flex-col max-w-[75%] md:max-w-[65%] min-w-0 ${isMe ? 'items-end' : 'items-start'}`}>
                         {/* Name + role */}
                         {!isMe && (
                           <div className="text-[10px] text-slate-500 mb-1 ml-1 font-semibold">
@@ -163,7 +163,7 @@ function ChatContent() {
                         )}
 
                         {/* Bubble */}
-                        <div className={`relative px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm
+                        <div className={`relative px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm break-words
                           ${isMe
                             ? 'bg-blue-600 text-white rounded-br-none'
                             : 'bg-white text-slate-800 rounded-bl-none border border-slate-100'
@@ -199,7 +199,7 @@ function ChatContent() {
             {/* Input area */}
             <div className="bg-white border-t border-slate-100 p-4 flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
+                <div className="hidden sm:flex w-8 h-8 rounded-full bg-blue-600 items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
                   {getInitials(currentUser?.name || 'U')}
                 </div>
                 <div className="flex-1 relative">
@@ -214,7 +214,7 @@ function ChatContent() {
                   <Send className="w-4 h-4" />
                 </button>
               </div>
-              <div className="text-[10px] text-slate-400 mt-2 ml-11 flex items-center gap-1">
+              <div className="text-[10px] text-slate-400 mt-2 sm:ml-11 flex items-center gap-1">
                 <span>Semua pesan tersimpan dan masuk audit log sistem</span>
               </div>
             </div>

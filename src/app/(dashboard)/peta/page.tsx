@@ -125,7 +125,7 @@ export default function PetaPage() {
       <div className="flex flex-col h-[calc(100vh-56px)]">
 
         {/* KPI strip */}
-        <div className="bg-white border-b border-slate-100 px-5 py-2.5 flex items-center gap-6 flex-shrink-0">
+        <div className="bg-white border-b border-slate-100 px-5 py-2.5 flex flex-wrap items-center gap-3 md:gap-6 flex-shrink-0">
           {[
             { label: 'Total', val: stats.total, color: 'text-slate-800' },
             { label: 'On Track', val: stats.onTrack, color: 'text-green-600' },
@@ -137,19 +137,19 @@ export default function PetaPage() {
               <span className="text-xs text-slate-400">{s.label}</span>
             </div>
           ))}
-          <div className="ml-auto flex items-center gap-2 flex-wrap">
+          <div className="w-full md:w-auto md:ml-auto flex items-center gap-2 flex-wrap">
             <select value={filterKategori} onChange={e => setFilterKategori(e.target.value)}
-              className="border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-600">
+              className="w-full sm:w-auto border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-600">
               <option value="all">Semua Pengadaan</option>
               {PROJECT_CATEGORIES.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
             </select>
             <select value={filterJenisProyek} onChange={e => setFilterJenisProyek(e.target.value)}
-              className="border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-600">
+              className="w-full sm:w-auto border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-600">
               <option value="all">Semua Jenis Proyek</option>
               {PROJECT_PACKAGE_TYPES.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
             </select>
             <select value={filterTahap} onChange={e => setFilterTahap(e.target.value)}
-              className="border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-600">
+              className="w-full sm:w-auto border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-600">
               <option value="all">Semua Tahap</option>
               {PROJECT_WORK_STAGES.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
             </select>
@@ -181,7 +181,7 @@ export default function PetaPage() {
           <div ref={mapRef} className="flex-1 min-h-0 z-0" />
 
           {/* Legend */}
-          <div className="absolute bottom-16 left-3 bg-white rounded-xl shadow-lg border border-slate-100 p-3 z-[1000]">
+          <div className="absolute bottom-16 left-3 max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-lg border border-slate-100 p-3 z-[1000]">
             <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Keterangan</div>
             {[
               { color: '#16a34a', label: 'On Track' },
@@ -200,7 +200,7 @@ export default function PetaPage() {
 
           {/* Selected project panel */}
           {selected && (
-            <div className="absolute top-0 right-0 bottom-0 w-72 bg-white border-l border-slate-100 flex flex-col z-[1000] shadow-xl overflow-hidden">
+            <div className="absolute inset-x-3 bottom-3 top-auto max-h-[72%] md:inset-y-0 md:left-auto md:right-0 md:w-72 bg-white border border-slate-100 md:border-l flex flex-col z-[1000] shadow-xl overflow-hidden rounded-xl md:rounded-none">
               <div className="p-4 border-b border-slate-100 flex items-start justify-between">
                 <div>
                   <div className="text-xs font-semibold text-slate-500">Detail Proyek</div>

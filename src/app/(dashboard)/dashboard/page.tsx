@@ -131,19 +131,19 @@ export default function DashboardPage() {
         />
 
         {/* Quick Action Cards (role-based) */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {actions.map(a => {
             const Icon = a.icon
             return (
               <Link key={a.href + a.label} href={a.href}>
-                <div className={`${a.color} rounded-xl p-4 cursor-pointer hover:opacity-90 transition-opacity`}>
+                <div className={`${a.color} rounded-xl p-4 cursor-pointer hover:opacity-90 transition-opacity min-w-0`}>
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
                       <Icon className="w-5 h-5 text-white" />
                     </div>
-                    <div className="text-white font-semibold text-sm leading-tight">{a.label}</div>
+                    <div className="text-white font-semibold text-sm leading-tight break-words">{a.label}</div>
                   </div>
-                  <div className="text-white/70 text-xs">{a.desc}</div>
+                  <div className="text-white/70 text-xs break-words">{a.desc}</div>
                 </div>
               </Link>
             )
@@ -184,11 +184,11 @@ export default function DashboardPage() {
             { label: 'Laporan Menunggu', val: stats.laporanMenunggu, icon: '📋', bg: stats.laporanMenunggu > 0 ? 'bg-amber-50' : 'bg-green-50' },
             { label: 'Proyek Selesai', val: stats.selesai, icon: '🏆', bg: 'bg-blue-50' },
           ].map(s => (
-            <div key={s.label} className={`${s.bg} rounded-xl border border-slate-100 p-4`}>
-              <div className="text-xl mb-1">{s.icon}</div>
-              <div className="text-xl font-bold text-slate-800">{s.val}</div>
-              <div className="text-xs text-slate-500 mt-0.5">{s.label}</div>
-            </div>
+              <div key={s.label} className={`${s.bg} rounded-xl border border-slate-100 p-4 min-w-0`}>
+                <div className="text-xl mb-1">{s.icon}</div>
+              <div className="text-xl font-bold text-slate-800 break-words">{s.val}</div>
+                <div className="text-xs text-slate-500 mt-0.5">{s.label}</div>
+              </div>
           ))}
         </div>
 

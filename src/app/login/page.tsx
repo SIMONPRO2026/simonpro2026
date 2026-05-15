@@ -2,19 +2,18 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 import { ShieldCheck, TriangleAlert } from 'lucide-react'
-import { useAppStore } from '@/store/useAppStore'
 
 const DEMO_ACCOUNTS = [
   { role: 'Admin', email: 'admin@dumai.go.id', password: 'admin123' },
   { role: 'PPK', email: 'ppk@dumai.go.id', password: 'ppk123' },
   { role: 'Pimpinan', email: 'pimpinan@dumai.go.id', password: 'pimpinan123' },
-  { role: 'PPTK', email: 'pptk1@dumai.go.id', password: 'pptk123' },
+  { role: 'PPTK', email: 'pptk@dumai.go.id', password: 'pptk123' },
 ]
 
 export default function LoginPage() {
   const router = useRouter()
-  const login = useAppStore((state) => state.login)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -25,9 +24,13 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const success = login(email, password)
+    const result = await signIn('credentials', {
+      email,
+      password,
+      redirect: false,
+    })
 
-    if (!success) {
+    if (result?.error) {
       setError('Email atau password salah')
       setLoading(false)
       return

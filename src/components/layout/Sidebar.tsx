@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import { useAppStore } from '@/store/useAppStore'
 import { getRoleLabel, getInitials, canAccess } from '@/lib/utils'
 import {
@@ -63,7 +64,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 h-full z-40 flex flex-col transition-all duration-300"
+      className="fixed left-0 top-0 h-full z-40 hidden md:flex flex-col transition-all duration-300"
       style={{
         width: sidebarOpen ? 210 : 60,
         background: '#0f2140',
@@ -159,7 +160,7 @@ export function Sidebar() {
               <div className="text-white/40 text-[10px] truncate">{getRoleLabel(currentUser.role)}</div>
             </div>
           )}
-          <button onClick={logout} className="text-white/40 hover:text-red-400 transition-colors flex-shrink-0 p-0.5" title="Logout">
+          <button onClick={() => { logout(); signOut({ callbackUrl: '/login' }) }} className="text-white/40 hover:text-red-400 transition-colors flex-shrink-0 p-0.5" title="Logout">
             <LogOut className="w-3.5 h-3.5" />
           </button>
         </div>

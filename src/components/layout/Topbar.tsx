@@ -1,9 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import { useAppStore } from '@/store/useAppStore'
 import { getRoleLabel, getDashboardRoleLabel, getInitials, formatDateTime } from '@/lib/utils'
-import { Bell, ChevronDown, Menu, LogOut } from 'lucide-react'
+import { Bell, ChevronDown, LogOut } from 'lucide-react'
 import Link from 'next/link'
 
 interface TopbarProps {
@@ -30,7 +31,7 @@ export function Topbar({ title, subtitle, action }: TopbarProps) {
 
   const handleLogout = () => {
     logout()
-    router.replace('/login')
+    signOut({ callbackUrl: '/login' })
   }
 
   // Close dropdowns on click outside
@@ -42,20 +43,12 @@ export function Topbar({ title, subtitle, action }: TopbarProps) {
 
   return (
     <header
-      className="fixed top-0 right-0 z-30 bg-white border-b border-slate-100 flex items-center px-4 md:px-5 h-14 gap-3 transition-all duration-300"
-      style={{ left: typeof window !== 'undefined' && window.innerWidth < 768 ? 0 : sidebarOpen ? 210 : 60 }}
+      className="app-topbar fixed top-0 right-0 z-30 bg-white border-b border-slate-100 flex items-center px-3 md:px-5 h-14 gap-3 transition-all duration-300"
+      style={{ ['--sidebar-left' as string]: `${sidebarOpen ? 210 : 60}px` }}
     >
-      {/* Mobile menu toggle */}
-      <button
-        onClick={e => { e.stopPropagation(); setSidebarOpen(!sidebarOpen) }}
-        className="md:hidden w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200 flex-shrink-0"
-      >
-        <Menu className="w-4 h-4" />
-      </button>
-
       {/* Title */}
       <div className="flex-1 min-w-0">
-        <h1 className="text-sm font-bold text-slate-800 truncate leading-tight">{dashboardTitle}</h1>
+        <h1 className="text-sm md:text-sm font-bold text-slate-800 truncate leading-tight">{dashboardTitle}</h1>
         <p className="text-[11px] text-slate-400 leading-tight truncate hidden md:block">{pageContext}</p>
       </div>
 

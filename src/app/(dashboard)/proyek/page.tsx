@@ -88,11 +88,15 @@ export default function ProyekPage() {
     setShowForm(false)
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return
-    deleteProject(deleteTarget.id)
-    toast.success('Proyek berhasil dihapus')
-    setDeleteTarget(null)
+    try {
+      await deleteProject(deleteTarget.id)
+      toast.success('Proyek berhasil dihapus dari database')
+      setDeleteTarget(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menghapus proyek')
+    }
   }
 
   return (

@@ -2,6 +2,7 @@ import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
+import { mapDbRole } from './db-mappers'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -31,7 +32,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: mapDbRole(user.role),
         }
       },
     }),
