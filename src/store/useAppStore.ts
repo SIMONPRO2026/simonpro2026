@@ -33,7 +33,7 @@ interface AppState {
   sendChat: (proyekId: string, message: Omit<ChatMessage, 'id'|'timestamp'>) => Promise<void>
   deleteChat: (proyekId: string, chatId: string) => Promise<void>
   users: User[]
-  addUser: (user: Omit<User, 'id'>) => Promise<void>
+  addUser: (user: Omit<User, 'id'> & { password?: string }) => Promise<void>
   updateUser: (id: string, data: Partial<User>) => Promise<void>
   deleteUser: (id: string) => Promise<void>
   auditLogs: AuditLog[]

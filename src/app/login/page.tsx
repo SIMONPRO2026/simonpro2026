@@ -5,13 +5,6 @@ import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { ShieldCheck, TriangleAlert } from 'lucide-react'
 
-const DEMO_ACCOUNTS = [
-  { role: 'Admin', email: 'admin@dumai.go.id', password: 'admin123' },
-  { role: 'PPK', email: 'ppk@dumai.go.id', password: 'ppk123' },
-  { role: 'Pimpinan', email: 'pimpinan@dumai.go.id', password: 'pimpinan123' },
-  { role: 'PPTK', email: 'pptk@dumai.go.id', password: 'pptk123' },
-]
-
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -37,12 +30,6 @@ export default function LoginPage() {
     }
 
     router.replace('/dashboard')
-  }
-
-  const fillAccount = (account: (typeof DEMO_ACCOUNTS)[number]) => {
-    setEmail(account.email)
-    setPassword(account.password)
-    setError('')
   }
 
   return (
@@ -82,7 +69,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <h2 className="text-xl font-semibold">Masuk ke Sistem</h2>
-                <p className="text-sm text-slate-500">Gunakan salah satu akun SIMONPRO di bawah.</p>
+                <p className="text-sm text-slate-500">Gunakan akun yang diberikan administrator.</p>
               </div>
             </div>
 
@@ -126,24 +113,6 @@ export default function LoginPage() {
                 {loading ? 'Memverifikasi...' : 'Masuk'}
               </button>
             </form>
-
-            <div className="mt-6 border-t border-slate-100 pt-5">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Akun cepat</p>
-              <div className="grid grid-cols-2 gap-2">
-                {DEMO_ACCOUNTS.map((account) => (
-                  <button
-                    key={account.email}
-                    type="button"
-                    onClick={() => fillAccount(account)}
-                    className="rounded-lg border border-slate-200 px-3 py-2 text-left transition hover:border-blue-300 hover:bg-blue-50"
-                  >
-                    <div className="text-sm font-semibold text-slate-800">{account.role}</div>
-                    <div className="truncate text-xs text-slate-500">{account.email}</div>
-                    <div className="text-xs text-blue-600">{account.password}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
           <p className="mt-6 text-center text-xs text-blue-200">

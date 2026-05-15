@@ -12,6 +12,10 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 
 const EMPTY_FORM = {
+  tahun: new Date().getFullYear(),
+  program: '',
+  subProgram: '',
+  namaPekerjaan: '',
   kode: '', nama: '', lokasi: '', kecamatan: '',
   anggaran: 0, nilaiKontrak: 0,
   status: 'belum_survey' as ProjectStatus,
@@ -28,7 +32,7 @@ const EMPTY_FORM = {
 type FormData = typeof EMPTY_FORM
 
 export default function ProyekPage() {
-  const { projects, currentUser, addProject, updateProject, deleteProject } = useAppStore()
+  const { projects, users, currentUser, addProject, updateProject, deleteProject } = useAppStore()
   const [search, setSearch] = useState('')
   const [filterHealth, setFilterHealth] = useState('all')
   const [filterKategori, setFilterKategori] = useState('all')
@@ -42,6 +46,12 @@ export default function ProyekPage() {
 
   const kecamatanList = [...new Set(projects.map(p => p.kecamatan))]
   const canManage = canAccess(currentUser?.role || 'pptk', 'approve_laporan')
+  const ppkUsers = users.filter(u => u.role === 'ppk')
+  const pptkUsers = users.filter(u => u.role === 'pptk')
+  const kontraktorUsers = users.filter(u => u.role === 'kontraktor')
+  const konsultanPerencanaUsers = users.filter(u => u.role === 'konsultan_perencana')
+  const konsultanPengawasanUsers = users.filter(u => u.role === 'konsultan_pengawasan')
+  const projectTeamUsers = users.filter(u => !['super_admin', 'admin'].includes(u.role))
 
   const scopedProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap)
   const filtered = scopedProjects.filter(p => {
@@ -58,6 +68,10 @@ export default function ProyekPage() {
     setEditTarget(p)
     setForm({
       kode: p.kode, nama: p.nama, lokasi: p.lokasi, kecamatan: p.kecamatan,
+      tahun: (p as any).tahun || new Date().getFullYear(),
+      program: (p as any).program || '',
+      subProgram: (p as any).subProgram || '',
+      namaPekerjaan: (p as any).namaPekerjaan || p.nama,
       anggaran: p.anggaran, nilaiKontrak: p.nilaiKontrak || 0,
       status: p.status, progressFisik: p.progressFisik, progressKeuangan: p.progressKeuangan,
       kategoriPekerjaan: (p as any).kategoriPekerjaan || 'lelang',
@@ -244,6 +258,18 @@ export default function ProyekPage() {
           </div>
         }>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField label="Tahun Anggaran" required>
+            <Input type="number" placeholder="2026" value={(form as any).tahun || new Date().getFullYear()} onChange={e => f('tahun' as any, Number(e.target.value))} />
+          </FormField>
+          <FormField label="Program" required>
+            <Input placeholder="Program Pengelolaan SDA" value={(form as any).program || ''} onChange={e => f('program' as any, e.target.value)} />
+          </FormField>
+          <FormField label="Sub Program / Kegiatan" required>
+            <Input placeholder="Pembangunan / Rehabilitasi Drainase" value={(form as any).subProgram || ''} onChange={e => f('subProgram' as any, e.target.value)} />
+          </FormField>
+          <FormField label="Nama Pekerjaan" required>
+            <Input placeholder="Nama pekerjaan sesuai DPA/SPK" value={(form as any).namaPekerjaan || form.nama} onChange={e => f('namaPekerjaan' as any, e.target.value)} />
+          </FormField>
           <FormField label="Kode Proyek" required>
             <Input placeholder="PU-DRN-001/2026" value={form.kode} onChange={e => f('kode', e.target.value)} />
           </FormField>
@@ -305,25 +331,54 @@ export default function ProyekPage() {
             </div>
           </FormField>
           <FormField label="Kontraktor">
-            <Input placeholder="PT. Bangun Riau Jaya" value={form.kontraktor} onChange={e => f('kontraktor', e.target.value)} />
+            <Select value={form.kontraktor} onChange={e => f('kontraktor', e.target.value)}>
+              <option value="">Pilih kontraktor/penyedia</option>
+              {kontraktorUsers.map(user => <option key={user.id} value={user.name}>{user.name}</option>)}
+            </Select>
           </FormField>
           <FormField label="PPTK">
-            <Input placeholder="Nama PPTK" value={form.pptk} onChange={e => f('pptk', e.target.value)} />
+            <Select value={form.pptk} onChange={e => f('pptk', e.target.value)}>
+              <option value="">Pilih PPTK</option>
+              {pptkUsers.map(user => <option key={user.id} value={user.name}>{user.name}</option>)}
+            </Select>
           </FormField>
           <FormField label="PPK">
-            <Input placeholder="Nama PPK" value={form.ppk} onChange={e => f('ppk', e.target.value)} />
+            <Select value={form.ppk} onChange={e => f('ppk', e.target.value)}>
+              <option value="">Pilih PPK</option>
+              {ppkUsers.map(user => <option key={user.id} value={user.name}>{user.name}</option>)}
+            </Select>
           </FormField>
           <FormField label="Konsultan Perencana">
-            <Input placeholder="CV. Konsultan Mitra Riau" value={form.konsultanPerencana} onChange={e => f('konsultanPerencana', e.target.value)} />
+            <Select value={form.konsultanPerencana} onChange={e => f('konsultanPerencana', e.target.value)}>
+              <option value="">Pilih konsultan perencana</option>
+              {konsultanPerencanaUsers.map(user => <option key={user.id} value={user.name}>{user.name}</option>)}
+            </Select>
           </FormField>
           <FormField label="Konsultan Pengawasan">
-            <Input placeholder="PT. Pengawas Prima" value={form.konsultanPengawasan} onChange={e => f('konsultanPengawasan', e.target.value)} />
+            <Select value={form.konsultanPengawasan} onChange={e => f('konsultanPengawasan', e.target.value)}>
+              <option value="">Pilih konsultan pengawasan</option>
+              {konsultanPengawasanUsers.map(user => <option key={user.id} value={user.name}>{user.name}</option>)}
+            </Select>
           </FormField>
-          <FormField label="Koordinat Latitude">
-            <Input type="number" step="0.0001" placeholder="1.6781" value={form.koordinat.lat} onChange={e => f('koordinat', { ...form.koordinat, lat: Number(e.target.value) })} />
+          <FormField label="Personil Terlibat" hint="Dipilih dari data pengguna yang dibuat admin" className="md:col-span-2">
+            <div className="grid max-h-44 grid-cols-1 gap-2 overflow-y-auto rounded-xl border border-slate-200 p-3 md:grid-cols-2">
+              {projectTeamUsers.map(user => (
+                <label key={user.id} className="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-xs hover:bg-slate-50">
+                  <input
+                    type="checkbox"
+                    checked={form.assignedUsers.includes(user.id)}
+                    onChange={e => f('assignedUsers', e.target.checked ? [...form.assignedUsers, user.id] : form.assignedUsers.filter(id => id !== user.id))}
+                  />
+                  <span className="font-medium text-slate-700">{user.name}</span>
+                  <span className="ml-auto text-[10px] text-slate-400">{user.role}</span>
+                </label>
+              ))}
+            </div>
           </FormField>
-          <FormField label="Koordinat Longitude">
-            <Input type="number" step="0.0001" placeholder="101.4473" value={form.koordinat.lng} onChange={e => f('koordinat', { ...form.koordinat, lng: Number(e.target.value) })} />
+          <FormField label="Koordinat Lapangan" hint="Diisi otomatis dari GPS saat PPTK melakukan survey/laporan di lapangan" className="md:col-span-2">
+            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+              Titik koordinat tidak diinput manual oleh admin.
+            </div>
           </FormField>
         </div>
       </Modal>

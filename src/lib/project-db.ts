@@ -73,8 +73,11 @@ export async function getMappedPaket(id: string): Promise<Proyek | null> {
   return paket ? mapDbPaket(paket as any) : null
 }
 
-export async function ensureDefaultSubKegiatan() {
-  const tahun = new Date().getFullYear()
+export async function ensureDefaultSubKegiatan(input?: { tahun?: number; program?: string; subProgram?: string; namaPekerjaan?: string; paguAnggaran?: number }) {
+  const tahun = Number(input?.tahun || new Date().getFullYear())
+  const programName = input?.program?.trim() || 'Program Monitoring Proyek SIMONPRO'
+  const subProgramName = input?.subProgram?.trim() || 'Kegiatan Monitoring Proyek'
+  const pekerjaanName = input?.namaPekerjaan?.trim() || 'Sub Kegiatan Umum'
 
   const tahunAnggaran = await prisma.tahunAnggaran.upsert({
     where: { tahun },
@@ -86,14 +89,14 @@ export async function ensureDefaultSubKegiatan() {
     where: {
       tahunAnggaranId_kode: {
         tahunAnggaranId: tahunAnggaran.id,
-        kode: 'SIMONPRO',
+        kode: programName.slice(0, 32).toUpperCase().replace(/[^A-Z0-9]+/g, '_') || 'SIMONPRO',
       },
     },
     update: {},
     create: {
       tahunAnggaranId: tahunAnggaran.id,
-      kode: 'SIMONPRO',
-      nama: 'Program Monitoring Proyek SIMONPRO',
+      kode: programName.slice(0, 32).toUpperCase().replace(/[^A-Z0-9]+/g, '_') || 'SIMONPRO',
+      nama: programName,
     },
   })
 
@@ -101,14 +104,14 @@ export async function ensureDefaultSubKegiatan() {
     where: {
       programId_kode: {
         programId: program.id,
-        kode: 'MONITORING',
+        kode: subProgramName.slice(0, 32).toUpperCase().replace(/[^A-Z0-9]+/g, '_') || 'MONITORING',
       },
     },
     update: {},
     create: {
       programId: program.id,
-      kode: 'MONITORING',
-      nama: 'Kegiatan Monitoring Proyek',
+      kode: subProgramName.slice(0, 32).toUpperCase().replace(/[^A-Z0-9]+/g, '_') || 'MONITORING',
+      nama: subProgramName,
     },
   })
 
@@ -116,15 +119,15 @@ export async function ensureDefaultSubKegiatan() {
     where: {
       kegiatanId_kode: {
         kegiatanId: kegiatan.id,
-        kode: 'UMUM',
+        kode: pekerjaanName.slice(0, 32).toUpperCase().replace(/[^A-Z0-9]+/g, '_') || 'UMUM',
       },
     },
     update: {},
     create: {
       kegiatanId: kegiatan.id,
-      kode: 'UMUM',
-      nama: 'Sub Kegiatan Umum',
-      paguAnggaran: 0,
+      kode: pekerjaanName.slice(0, 32).toUpperCase().replace(/[^A-Z0-9]+/g, '_') || 'UMUM',
+      nama: pekerjaanName,
+      paguAnggaran: Number(input?.paguAnggaran || 0),
     },
   })
 }

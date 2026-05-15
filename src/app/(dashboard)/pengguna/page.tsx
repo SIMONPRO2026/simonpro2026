@@ -43,7 +43,18 @@ export default function PenggunaPage() {
   const [showPass, setShowPass] = useState(false)
   const [password, setPassword] = useState('')
 
-  if (currentUser?.role !== 'admin') {
+  const canManageUsers = currentUser?.role === 'admin' || currentUser?.role === 'super_admin'
+  const isSuperAdmin = currentUser?.role === 'super_admin'
+  const superAdminExists = users.some(u => u.role === 'super_admin')
+
+  const canManageUser = (user: User) => {
+    if (!currentUser) return false
+    if (currentUser.id === user.id) return false
+    if (isSuperAdmin) return true
+    return user.role !== 'admin' && user.role !== 'super_admin'
+  }
+
+  if (!canManageUsers) {
     return (
       <>
         <Topbar title="Pengguna" subtitle="Manajemen akun pengguna" />
@@ -51,7 +62,7 @@ export default function PenggunaPage() {
           <div className="bg-white rounded-xl border border-slate-100 p-12 text-center">
             <Shield className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <div className="text-base font-semibold text-slate-600 mb-1">Akses Terbatas</div>
-            <div className="text-sm text-slate-400">Hanya Administrator yang dapat mengelola pengguna</div>
+            <div className="text-sm text-slate-400">Hanya Super Admin dan Administrator yang dapat mengelola pengguna</div>
           </div>
         </div>
       </>
@@ -76,20 +87,27 @@ export default function PenggunaPage() {
     setPassword(''); setShowForm(true)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.name.trim()) return toast.error('Nama lengkap wajib diisi')
     if (!form.email.trim()) return toast.error('Email wajib diisi')
     if (!editTarget && !password) return toast.error('Password wajib diisi untuk pengguna baru')
     if (!editTarget && users.find(u => u.email === form.email)) return toast.error('Email sudah terdaftar')
+    if (!isSuperAdmin && (form.role === 'admin' || form.role === 'super_admin')) return toast.error('Hanya Super Admin yang dapat mengelola admin')
+    if (!editTarget && form.role === 'super_admin' && superAdminExists) return toast.error('Super Admin hanya boleh 1 akun')
+    if (editTarget && !canManageUser(editTarget)) return toast.error('Anda tidak berwenang mengubah pengguna ini')
 
-    if (editTarget) {
-      updateUser(editTarget.id, { name: form.name, email: form.email, role: form.role, nip: form.nip, jabatan: form.jabatan, projectIds: form.projectIds })
-      toast.success('Pengguna berhasil diperbarui')
-    } else {
-      addUser({ name: form.name, email: form.email, role: form.role, nip: form.nip, jabatan: form.jabatan, projectIds: form.projectIds })
-      toast.success(`Pengguna ${form.name} berhasil ditambahkan`)
+    try {
+      if (editTarget) {
+        await updateUser(editTarget.id, { name: form.name, email: form.email, role: form.role, nip: form.nip, jabatan: form.jabatan, projectIds: form.projectIds })
+        toast.success('Pengguna berhasil diperbarui')
+      } else {
+        await addUser({ name: form.name, email: form.email, role: form.role, nip: form.nip, jabatan: form.jabatan, projectIds: form.projectIds, password } as any)
+        toast.success(`Pengguna ${form.name} berhasil ditambahkan`)
+      }
+      setShowForm(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan pengguna')
     }
-    setShowForm(false)
   }
 
   const roleColors: Record<string, any> = {
@@ -105,7 +123,7 @@ export default function PenggunaPage() {
         <div className="grid grid-cols-4 gap-3 mb-5">
           {[
             { label: 'Total User', val: users.length, bg: 'bg-white', color: 'text-slate-800' },
-            { label: 'Staff Dinas', val: users.filter(u => ['ppk','pptk','pimpinan','tim_perencanaan','tim_pengawasan','admin'].includes(u.role)).length, bg: 'bg-blue-50', color: 'text-blue-700' },
+            { label: 'Staff Dinas', val: users.filter(u => ['ppk','pptk','pimpinan','tim_perencanaan','tim_pengawasan','admin','super_admin'].includes(u.role)).length, bg: 'bg-blue-50', color: 'text-blue-700' },
             { label: 'Konsultan', val: users.filter(u => u.role.startsWith('konsultan')).length, bg: 'bg-purple-50', color: 'text-purple-700' },
             { label: 'Admin', val: users.filter(u => u.role === 'admin').length, bg: 'bg-red-50', color: 'text-red-700' },
           ].map(s => (
@@ -125,7 +143,7 @@ export default function PenggunaPage() {
           </div>
           <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
             <option value="all">Semua Role</option>
-            {ROLES.map(r => <option key={r.val} value={r.val}>{r.label}</option>)}
+            {ROLES.filter(r => isSuperAdmin || !['admin', 'super_admin'].includes(r.val)).map(r => <option key={r.val} value={r.val}>{r.label}</option>)}
           </select>
           <span className="text-xs text-slate-400">{filtered.length} pengguna</span>
           <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 ml-auto">
@@ -180,7 +198,7 @@ export default function PenggunaPage() {
                     </button>
                     <ActionButtons
                       onEdit={() => openEdit(u)}
-                      onDelete={u.id !== currentUser?.id ? () => setDeleteTarget(u) : undefined}
+                      onDelete={canManageUser(u) ? () => setDeleteTarget(u) : undefined}
                     />
                   </div>
                 </div>
@@ -220,12 +238,14 @@ export default function PenggunaPage() {
           )}
           <FormField label="Role / Jabatan Sistem" required>
             <div className="grid grid-cols-2 gap-2">
-              {ROLES.map(r => (
+              {ROLES.filter(r => isSuperAdmin || !['admin', 'super_admin'].includes(r.val)).map(r => (
+                r.val === 'super_admin' && superAdminExists && !editTarget ? null : (
                 <button key={r.val} onClick={() => f('role', r.val)}
                   className={`text-left p-3 rounded-xl border-2 transition-all ${form.role === r.val ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}>
                   <div className={`text-xs font-bold ${form.role === r.val ? 'text-blue-700' : 'text-slate-700'}`}>{r.label}</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">{r.desc}</div>
                 </button>
+                )
               ))}
             </div>
           </FormField>
@@ -291,7 +311,17 @@ export default function PenggunaPage() {
       </Modal>
 
       <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}
-        onConfirm={() => { deleteUser(deleteTarget!.id); toast.success('Pengguna dihapus'); setDeleteTarget(null) }}
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          if (!canManageUser(deleteTarget)) return toast.error('Anda tidak berwenang menghapus pengguna ini')
+          try {
+            await deleteUser(deleteTarget.id)
+            toast.success('Pengguna dihapus')
+            setDeleteTarget(null)
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Gagal menghapus pengguna')
+          }
+        }}
         title="Hapus Pengguna?" message={`Akun "${deleteTarget?.name}" akan dihapus permanen. User tidak dapat login lagi.`} />
     </>
   )

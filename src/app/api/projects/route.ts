@@ -11,10 +11,21 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const subKegiatan = await ensureDefaultSubKegiatan()
+  const subKegiatan = await ensureDefaultSubKegiatan({
+    tahun: body.tahun,
+    program: body.program,
+    subProgram: body.subProgram,
+    namaPekerjaan: body.namaPekerjaan || body.nama,
+    paguAnggaran: body.anggaran,
+  })
   const progressFisik = Number(body.progressFisik || 0)
   const progressKeuangan = Number(body.progressKeuangan || 0)
   const deviasi = progressFisik - progressKeuangan
+  const [ppk, pptk, assignedUsers] = await Promise.all([
+    body.ppk ? prisma.user.findFirst({ where: { name: body.ppk }, select: { id: true } }) : null,
+    body.pptk ? prisma.user.findFirst({ where: { name: body.pptk }, select: { id: true } }) : null,
+    body.assignedUsers?.length ? prisma.user.findMany({ where: { id: { in: body.assignedUsers } }, select: { id: true, role: true } }) : [],
+  ])
 
   const paket = await prisma.paket.create({
     data: {
@@ -35,6 +46,14 @@ export async function POST(request: Request) {
       deviasi,
       tglMulai: body.tanggalMulai ? new Date(body.tanggalMulai) : null,
       tglSelesai: body.tanggalSelesai ? new Date(body.tanggalSelesai) : null,
+      ppkId: ppk?.id,
+      pptkId: pptk?.id,
+      assignments: {
+        create: assignedUsers.map(user => ({
+          userId: user.id,
+          rolePaket: user.role,
+        })),
+      },
     },
   })
 

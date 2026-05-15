@@ -91,7 +91,7 @@ export function Sidebar() {
         {NAV.map(section => {
           // Filter admin-only items
           const items = section.items.filter(item => {
-            if ((item as any).adminOnly && currentUser.role !== 'admin') return false
+            if ((item as any).adminOnly && !['admin', 'super_admin'].includes(currentUser.role)) return false
             return true
           })
           if (items.length === 0) return null

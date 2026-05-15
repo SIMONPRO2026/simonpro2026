@@ -18,6 +18,16 @@ export async function PATCH(
   }
 
   const body = await request.json()
+  const target = await prisma.user.findUnique({ where: { id }, select: { role: true } })
+  if (!target) return NextResponse.json({ message: 'User not found' }, { status: 404 })
+  if (role !== 'super_admin' && (target.role === 'ADMIN' || target.role === 'SUPER_ADMIN' || body.role === 'admin' || body.role === 'super_admin')) {
+    return NextResponse.json({ message: 'Hanya Super Admin yang dapat mengelola Admin' }, { status: 403 })
+  }
+  if (body.role === 'super_admin') {
+    const existingSuperAdmin = await prisma.user.count({ where: { role: 'SUPER_ADMIN', isActive: true, NOT: { id } } })
+    if (existingSuperAdmin > 0) return NextResponse.json({ message: 'Super Admin hanya boleh 1 akun' }, { status: 400 })
+  }
+
   const user = await prisma.user.update({
     where: { id },
     data: {
@@ -56,6 +66,11 @@ export async function DELETE(
   const { id } = await params
   if (session.user.id === id) {
     return NextResponse.json({ message: 'Tidak bisa menghapus akun sendiri' }, { status: 400 })
+  }
+  const target = await prisma.user.findUnique({ where: { id }, select: { role: true } })
+  if (!target) return NextResponse.json({ message: 'User not found' }, { status: 404 })
+  if (role !== 'super_admin' && (target.role === 'ADMIN' || target.role === 'SUPER_ADMIN')) {
+    return NextResponse.json({ message: 'Hanya Super Admin yang dapat menghapus Admin' }, { status: 403 })
   }
 
   await prisma.user.update({

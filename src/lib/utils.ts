@@ -120,6 +120,8 @@ export function getInitials(name: string): string {
 }
 
 export function canAccess(role: Role, permission: string): boolean {
+  if (role === 'super_admin') return true
+
   const permissions: Record<string, Role[]> = {
     approve_laporan: ['ppk', 'admin'],
     create_laporan: ['pptk', 'admin'],
@@ -128,7 +130,7 @@ export function canAccess(role: Role, permission: string): boolean {
     approve_rab: ['ppk', 'admin'],
     create_survey: ['tim_perencanaan', 'konsultan_perencana', 'admin'],
     view_audit_log: ['admin', 'ppk', 'pimpinan'],
-    manage_users: ['admin'],
+    manage_users: ['admin', 'super_admin'],
     view_keuangan: ['ppk', 'pimpinan', 'admin'],
     create_catatan_pengawasan: ['tim_pengawasan', 'konsultan_pengawasan', 'admin'],
     create_masalah: ['pptk', 'tim_pengawasan', 'konsultan_pengawasan', 'admin'],

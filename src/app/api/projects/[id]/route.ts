@@ -25,27 +25,50 @@ export async function PATCH(
 
   const progressFisik = body.progressFisik != null ? Number(body.progressFisik) : Number(existing.progressFisik)
   const progressKeuangan = body.progressKeuangan != null ? Number(body.progressKeuangan) : Number(existing.progressKeuangan)
+  const [ppk, pptk, assignedUsers] = await Promise.all([
+    body.ppk ? prisma.user.findFirst({ where: { name: body.ppk }, select: { id: true } }) : null,
+    body.pptk ? prisma.user.findFirst({ where: { name: body.pptk }, select: { id: true } }) : null,
+    body.assignedUsers?.length ? prisma.user.findMany({ where: { id: { in: body.assignedUsers } }, select: { id: true, role: true } }) : [],
+  ])
 
-  await prisma.paket.update({
-    where: { id },
-    data: {
-      kodePaket: body.kode,
-      namaPaket: body.nama,
-      jenis: body.kategoriPekerjaan || body.jenisProyek ? toPaketJenis(body.kategoriPekerjaan || body.jenisProyek) : undefined,
-      kategoriFisik: body.jenisProyek ? toKategoriFisik(body.jenisProyek) : undefined,
-      lokasi: body.lokasi,
-      kecamatan: body.kecamatan,
-      koordinat: body.koordinat,
-      paguAnggaran: body.anggaran != null ? Number(body.anggaran) : undefined,
-      nilaiKontrak: body.nilaiKontrak != null ? Number(body.nilaiKontrak) : undefined,
-      status: body.status ? toPaketStatus(body.status) : undefined,
-      health: toHealthStatus(progressFisik, progressKeuangan),
-      progressFisik,
-      progressKeuangan,
-      deviasi: progressFisik - progressKeuangan,
-      tglMulai: body.tanggalMulai ? new Date(body.tanggalMulai) : undefined,
-      tglSelesai: body.tanggalSelesai ? new Date(body.tanggalSelesai) : undefined,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.paket.update({
+      where: { id },
+      data: {
+        kodePaket: body.kode,
+        namaPaket: body.nama,
+        jenis: body.kategoriPekerjaan || body.jenisProyek ? toPaketJenis(body.kategoriPekerjaan || body.jenisProyek) : undefined,
+        kategoriFisik: body.jenisProyek ? toKategoriFisik(body.jenisProyek) : undefined,
+        lokasi: body.lokasi,
+        kecamatan: body.kecamatan,
+        koordinat: body.koordinat,
+        paguAnggaran: body.anggaran != null ? Number(body.anggaran) : undefined,
+        nilaiKontrak: body.nilaiKontrak != null ? Number(body.nilaiKontrak) : undefined,
+        status: body.status ? toPaketStatus(body.status) : undefined,
+        health: toHealthStatus(progressFisik, progressKeuangan),
+        progressFisik,
+        progressKeuangan,
+        deviasi: progressFisik - progressKeuangan,
+        tglMulai: body.tanggalMulai ? new Date(body.tanggalMulai) : undefined,
+        tglSelesai: body.tanggalSelesai ? new Date(body.tanggalSelesai) : undefined,
+        ppkId: ppk?.id,
+        pptkId: pptk?.id,
+      },
+    })
+
+    if (body.assignedUsers) {
+      await tx.paketAssignment.deleteMany({ where: { paketId: id } })
+      if (assignedUsers.length) {
+        await tx.paketAssignment.createMany({
+          data: assignedUsers.map(user => ({
+            paketId: id,
+            userId: user.id,
+            rolePaket: user.role,
+          })),
+          skipDuplicates: true,
+        })
+      }
+    }
   })
 
   await logAudit(session.user.id, 'UPDATE_PROYEK', `Update proyek: ${body.nama || existing.namaPaket}`, {
