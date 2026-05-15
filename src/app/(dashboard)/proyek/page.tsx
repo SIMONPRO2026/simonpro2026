@@ -4,7 +4,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { Topbar } from '@/components/layout/Topbar'
 import { Modal, ConfirmDialog, FormField, Input, Select, EmptyState, ActionButtons, StatusBadge } from '@/components/ui'
 import { formatCurrency, getHealthBadge, getStatusLabel, formatDate, canAccess, getRoleLabel } from '@/lib/utils'
-import { PROJECT_CATEGORIES, PROJECT_PACKAGE_TYPES, filterProjectsByScope, getProjectCategoryLabel, getProjectPackageType, getProjectPackageTypeLabel, getProjectWorkStage, getProjectWorkStageLabel } from '@/lib/reporting'
+import { PROJECT_CATEGORIES, PROJECT_PACKAGE_TYPES, filterProjectsByScope, getProjectBudgetYears, getProjectCategoryLabel, getProjectPackageType, getProjectPackageTypeLabel, getProjectPrograms, getProjectSubKegiatan, getProjectWorkStage, getProjectWorkStageLabel } from '@/lib/reporting'
 import { ProjectScopeFilters } from '@/components/project/ProjectScopeFilters'
 import { Proyek, ProjectStatus } from '@/types'
 import { Search, Plus, FolderOpen, MapPin, Calendar, TrendingDown, TrendingUp, ChevronRight } from 'lucide-react'
@@ -37,6 +37,9 @@ export default function ProyekPage() {
   const [filterKategori, setFilterKategori] = useState('all')
   const [filterJenisProyek, setFilterJenisProyek] = useState('all')
   const [filterTahap, setFilterTahap] = useState('all')
+  const [filterTahun, setFilterTahun] = useState('all')
+  const [filterProgram, setFilterProgram] = useState('all')
+  const [filterSubKegiatan, setFilterSubKegiatan] = useState('all')
   const [filterKec, setFilterKec] = useState('all')
   const [showForm, setShowForm] = useState(false)
   const [editTarget, setEditTarget] = useState<Proyek | null>(null)
@@ -52,7 +55,10 @@ export default function ProyekPage() {
   const konsultanPengawasanUsers = users.filter(u => u.role === 'konsultan_pengawasan')
   const projectTeamUsers = users.filter(u => u.role !== 'super_admin')
 
-  const scopedProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap)
+  const budgetYears = getProjectBudgetYears(projects)
+  const programs = getProjectPrograms(projects)
+  const subKegiatanOptions = getProjectSubKegiatan(projects)
+  const scopedProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap, filterTahun, filterProgram, filterSubKegiatan)
   const filtered = scopedProjects.filter(p => {
     const q = search.toLowerCase()
     const ms = p.nama.toLowerCase().includes(q) || p.kode.toLowerCase().includes(q) || (p.kontraktor || '').toLowerCase().includes(q)
@@ -67,9 +73,9 @@ export default function ProyekPage() {
     setEditTarget(p)
     setForm({
       kode: p.kode, nama: p.nama, lokasi: p.lokasi, kecamatan: p.kecamatan,
-      tahun: (p as any).tahun || new Date().getFullYear(),
+      tahun: (p as any).tahunAnggaran || (p as any).tahun || new Date().getFullYear(),
       program: (p as any).program || '',
-      subProgram: (p as any).subProgram || '',
+      subProgram: (p as any).kegiatan || (p as any).subProgram || '',
       anggaran: p.anggaran, nilaiKontrak: p.nilaiKontrak || 0,
       status: p.status, progressFisik: p.progressFisik, progressKeuangan: p.progressKeuangan,
       kategoriPekerjaan: (p as any).kategoriPekerjaan || 'lelang',
@@ -119,9 +125,18 @@ export default function ProyekPage() {
           category={filterKategori}
           packageType={filterJenisProyek}
           workStage={filterTahap}
+          budgetYear={filterTahun}
+          budgetYears={budgetYears}
+          program={filterProgram}
+          programs={programs}
+          subKegiatan={filterSubKegiatan}
+          subKegiatanOptions={subKegiatanOptions}
           onCategoryChange={setFilterKategori}
           onPackageTypeChange={setFilterJenisProyek}
           onWorkStageChange={setFilterTahap}
+          onBudgetYearChange={setFilterTahun}
+          onProgramChange={setFilterProgram}
+          onSubKegiatanChange={setFilterSubKegiatan}
           total={filtered.length}
           className="mb-5"
         />

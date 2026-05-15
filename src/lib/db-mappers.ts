@@ -72,6 +72,16 @@ type PaketWithRelations = {
   updatedAt: Date
   ppk: { id: string; name: string } | null
   pptk: { id: string; name: string } | null
+  subKegiatan: {
+    nama: string
+    kegiatan: {
+      nama: string
+      program: {
+        nama: string
+        tahunAnggaran: { tahun: number }
+      }
+    }
+  }
   assignments: { userId: string; user: { name: string; role: PrismaRole } }[]
   kontrak: { nilaiKontrak: unknown; penyedia: string; tglMulai: Date; tglSelesai: Date }[]
   laporanHarianBaru: {
@@ -404,6 +414,10 @@ export function mapDbPaket(paket: PaketWithRelations): Proyek {
     status: mapPaketStatus(paket.status),
     kategoriPekerjaan: mapPaketJenis(paket.jenis),
     jenisProyek: paket.jenis === 'KONSULTAN_PERENCANA' ? 'konsultan_perencanaan' : paket.jenis === 'KONSULTAN_PENGAWAS' ? 'konsultan_pengawasan' : 'fisik',
+    tahunAnggaran: paket.subKegiatan?.kegiatan?.program?.tahunAnggaran?.tahun,
+    program: paket.subKegiatan?.kegiatan?.program?.nama,
+    kegiatan: paket.subKegiatan?.kegiatan?.nama,
+    subKegiatan: paket.subKegiatan?.nama,
     health: mapPaketHealth(paket.health),
     progressFisik: numberFromDecimal(paket.progressFisik),
     progressKeuangan: numberFromDecimal(paket.progressKeuangan),

@@ -4,7 +4,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { Topbar } from '@/components/layout/Topbar'
 import { Modal, ConfirmDialog, FormField, Input, Textarea, Select, EmptyState, ActionButtons } from '@/components/ui'
 import { formatDate, formatDateTime, getCurrentGPS, canAccess } from '@/lib/utils'
-import { filterProjectsByScope, getProjectCategoryLabel, getProjectPackageType, getProjectPackageTypeLabel, getProjectWorkStage, getProjectWorkStageLabel } from '@/lib/reporting'
+import { filterProjectsByScope, getProjectBudgetYears, getProjectCategoryLabel, getProjectPackageType, getProjectPackageTypeLabel, getProjectPrograms, getProjectSubKegiatan, getProjectWorkStage, getProjectWorkStageLabel } from '@/lib/reporting'
 import { ProjectScopeFilters } from '@/components/project/ProjectScopeFilters'
 import { Survey, Koordinat } from '@/types'
 import { MapPin, Camera, Plus, Search, X, CheckCircle, Eye } from 'lucide-react'
@@ -24,6 +24,9 @@ export default function SurveyPage() {
   const [filterKategori, setFilterKategori] = useState('all')
   const [filterJenisProyek, setFilterJenisProyek] = useState('all')
   const [filterTahap, setFilterTahap] = useState('all')
+  const [filterTahun, setFilterTahun] = useState('all')
+  const [filterProgram, setFilterProgram] = useState('all')
+  const [filterSubKegiatan, setFilterSubKegiatan] = useState('all')
   const [selectedProyekId, setSelectedProyekId] = useState('')
   const [gps, setGps] = useState<Koordinat | null>(null)
   const [loadingGps, setLoadingGps] = useState(false)
@@ -34,7 +37,10 @@ export default function SurveyPage() {
   const cameraRef = useRef<HTMLInputElement>(null)
 
   const canCreate = canAccess(currentUser?.role || 'pptk', 'create_survey')
-  const visibleProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap)
+  const budgetYears = getProjectBudgetYears(projects)
+  const programs = getProjectPrograms(projects)
+  const subKegiatanOptions = getProjectSubKegiatan(projects)
+  const visibleProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap, filterTahun, filterProgram, filterSubKegiatan)
 
   const allSurvey = visibleProjects.flatMap(p =>
     p.surveys.map(s => ({ ...s, proyekNama: p.nama, proyekKode: p.kode, proyekId: p.id }))
@@ -115,9 +121,18 @@ export default function SurveyPage() {
           category={filterKategori}
           packageType={filterJenisProyek}
           workStage={filterTahap}
+          budgetYear={filterTahun}
+          budgetYears={budgetYears}
+          program={filterProgram}
+          programs={programs}
+          subKegiatan={filterSubKegiatan}
+          subKegiatanOptions={subKegiatanOptions}
           onCategoryChange={(value) => { setFilterKategori(value); setFilterProyek('all') }}
           onPackageTypeChange={(value) => { setFilterJenisProyek(value); setFilterProyek('all') }}
           onWorkStageChange={(value) => { setFilterTahap(value); setFilterProyek('all') }}
+          onBudgetYearChange={(value) => { setFilterTahun(value); setFilterProyek('all') }}
+          onProgramChange={(value) => { setFilterProgram(value); setFilterProyek('all') }}
+          onSubKegiatanChange={(value) => { setFilterSubKegiatan(value); setFilterProyek('all') }}
           total={filtered.length}
           itemLabel="survey"
           className="mb-5"

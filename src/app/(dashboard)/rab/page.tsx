@@ -4,7 +4,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { Topbar } from '@/components/layout/Topbar'
 import { Modal, ConfirmDialog, FormField, EmptyState, ActionButtons } from '@/components/ui'
 import { formatCurrency, formatDate, canAccess } from '@/lib/utils'
-import { filterProjectsByScope, getProjectCategoryLabel, getProjectPackageType, getProjectPackageTypeLabel, getProjectWorkStage, getProjectWorkStageLabel } from '@/lib/reporting'
+import { filterProjectsByScope, getProjectBudgetYears, getProjectCategoryLabel, getProjectPackageType, getProjectPackageTypeLabel, getProjectPrograms, getProjectSubKegiatan, getProjectWorkStage, getProjectWorkStageLabel } from '@/lib/reporting'
 import { ProjectScopeFilters } from '@/components/project/ProjectScopeFilters'
 import { RAB, RABItem } from '@/types'
 import { FileText, Plus, Search, ChevronDown, ChevronRight, Trash2, X } from 'lucide-react'
@@ -16,6 +16,9 @@ export default function RABPage() {
   const [filterKategori, setFilterKategori] = useState('all')
   const [filterJenisProyek, setFilterJenisProyek] = useState('all')
   const [filterTahap, setFilterTahap] = useState('all')
+  const [filterTahun, setFilterTahun] = useState('all')
+  const [filterProgram, setFilterProgram] = useState('all')
+  const [filterSubKegiatan, setFilterSubKegiatan] = useState('all')
   const [expandedProyek, setExpandedProyek] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [formProyekId, setFormProyekId] = useState('')
@@ -28,7 +31,10 @@ export default function RABPage() {
   const canManage = canAccess(currentUser?.role || 'pptk', 'upload_rab')
   const canApprove = canAccess(currentUser?.role || 'pptk', 'approve_rab')
 
-  const visibleProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap)
+  const budgetYears = getProjectBudgetYears(projects)
+  const programs = getProjectPrograms(projects)
+  const subKegiatanOptions = getProjectSubKegiatan(projects)
+  const visibleProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap, filterTahun, filterProgram, filterSubKegiatan)
   const filteredProjects = visibleProjects.filter(p =>
     p.nama.toLowerCase().includes(search.toLowerCase()) || p.kode.toLowerCase().includes(search.toLowerCase())
   )
@@ -112,9 +118,18 @@ export default function RABPage() {
           category={filterKategori}
           packageType={filterJenisProyek}
           workStage={filterTahap}
+          budgetYear={filterTahun}
+          budgetYears={budgetYears}
+          program={filterProgram}
+          programs={programs}
+          subKegiatan={filterSubKegiatan}
+          subKegiatanOptions={subKegiatanOptions}
           onCategoryChange={setFilterKategori}
           onPackageTypeChange={setFilterJenisProyek}
           onWorkStageChange={setFilterTahap}
+          onBudgetYearChange={setFilterTahun}
+          onProgramChange={setFilterProgram}
+          onSubKegiatanChange={setFilterSubKegiatan}
           total={filteredProjects.length}
           className="mb-5"
         />

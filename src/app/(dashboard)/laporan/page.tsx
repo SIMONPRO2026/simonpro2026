@@ -10,6 +10,9 @@ import {
   buildWeeklyReports,
   exportRowsToExcel,
   filterProjectsByScope,
+  getProjectBudgetYears,
+  getProjectPrograms,
+  getProjectSubKegiatan,
   printGeneratedReport,
   reportToExcelRow,
 } from '@/lib/reporting'
@@ -32,6 +35,9 @@ export default function LaporanPage() {
   const [filterKategori, setFilterKategori] = useState('all')
   const [filterJenisProyek, setFilterJenisProyek] = useState('all')
   const [filterTahap, setFilterTahap] = useState('all')
+  const [filterTahun, setFilterTahun] = useState('all')
+  const [filterProgram, setFilterProgram] = useState('all')
+  const [filterSubKegiatan, setFilterSubKegiatan] = useState('all')
   const [reportMode, setReportMode] = useState<'harian' | 'mingguan' | 'bulanan'>('harian')
   const [search, setSearch] = useState('')
   const [selectedProyekId, setSelectedProyekId] = useState('')
@@ -48,7 +54,10 @@ export default function LaporanPage() {
   const canCreate = canAccess(currentUser?.role || 'pptk', 'create_laporan')
   const canApprove = canAccess(currentUser?.role || 'pptk', 'approve_laporan')
 
-  const visibleProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap)
+  const budgetYears = getProjectBudgetYears(projects)
+  const programs = getProjectPrograms(projects)
+  const subKegiatanOptions = getProjectSubKegiatan(projects)
+  const visibleProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap, filterTahun, filterProgram, filterSubKegiatan)
   const weeklyReports = buildWeeklyReports(visibleProjects)
   const monthlyReports = buildMonthlyReports(visibleProjects)
 
@@ -159,9 +168,18 @@ export default function LaporanPage() {
           category={filterKategori}
           packageType={filterJenisProyek}
           workStage={filterTahap}
+          budgetYear={filterTahun}
+          budgetYears={budgetYears}
+          program={filterProgram}
+          programs={programs}
+          subKegiatan={filterSubKegiatan}
+          subKegiatanOptions={subKegiatanOptions}
           onCategoryChange={(value) => { setFilterKategori(value); setFilterProyek('all') }}
           onPackageTypeChange={(value) => { setFilterJenisProyek(value); setFilterProyek('all') }}
           onWorkStageChange={(value) => { setFilterTahap(value); setFilterProyek('all') }}
+          onBudgetYearChange={(value) => { setFilterTahun(value); setFilterProyek('all') }}
+          onProgramChange={(value) => { setFilterProgram(value); setFilterProyek('all') }}
+          onSubKegiatanChange={(value) => { setFilterSubKegiatan(value); setFilterProyek('all') }}
           total={reportMode === 'harian' ? filtered.length : filteredGeneratedReports.length}
           itemLabel="laporan"
           className="mb-5"

@@ -4,7 +4,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { Topbar } from '@/components/layout/Topbar'
 import { Modal, ConfirmDialog, FormField, Input, Textarea, Select, EmptyState, ActionButtons } from '@/components/ui'
 import { formatDate, canAccess } from '@/lib/utils'
-import { PROJECT_CATEGORIES, filterProjectsByScope, getProjectCategoryLabel, getProjectPackageType, getProjectPackageTypeLabel, getProjectWorkStage, getProjectWorkStageLabel } from '@/lib/reporting'
+import { PROJECT_CATEGORIES, filterProjectsByScope, getProjectBudgetYears, getProjectCategoryLabel, getProjectPackageType, getProjectPackageTypeLabel, getProjectPrograms, getProjectSubKegiatan, getProjectWorkStage, getProjectWorkStageLabel } from '@/lib/reporting'
 import { ProjectScopeFilters } from '@/components/project/ProjectScopeFilters'
 import { Masalah } from '@/types'
 import { AlertTriangle, Plus, Search, Eye, X } from 'lucide-react'
@@ -37,13 +37,19 @@ export default function MasalahPage() {
   const [filterKategori, setFilterKategori] = useState('all')
   const [filterJenisProyek, setFilterJenisProyek] = useState('all')
   const [filterTahap, setFilterTahap] = useState('all')
+  const [filterTahun, setFilterTahun] = useState('all')
+  const [filterProgram, setFilterProgram] = useState('all')
+  const [filterSubKegiatan, setFilterSubKegiatan] = useState('all')
   const [search, setSearch] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const canCreate = canAccess(currentUser?.role || 'pptk', 'create_masalah')
   const canResolve = canAccess(currentUser?.role || 'pptk', 'resolve_masalah')
 
-  const visibleProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap)
+  const budgetYears = getProjectBudgetYears(projects)
+  const programs = getProjectPrograms(projects)
+  const subKegiatanOptions = getProjectSubKegiatan(projects)
+  const visibleProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap, filterTahun, filterProgram, filterSubKegiatan)
 
   const allMasalah = visibleProjects.flatMap(p =>
     p.masalah.map(m => ({ ...m, proyekNama: p.nama, proyekKode: p.kode, proyekId: p.id }))
@@ -127,9 +133,18 @@ export default function MasalahPage() {
           category={filterKategori}
           packageType={filterJenisProyek}
           workStage={filterTahap}
+          budgetYear={filterTahun}
+          budgetYears={budgetYears}
+          program={filterProgram}
+          programs={programs}
+          subKegiatan={filterSubKegiatan}
+          subKegiatanOptions={subKegiatanOptions}
           onCategoryChange={(value) => { setFilterKategori(value); setFilterProyek('all') }}
           onPackageTypeChange={(value) => { setFilterJenisProyek(value); setFilterProyek('all') }}
           onWorkStageChange={(value) => { setFilterTahap(value); setFilterProyek('all') }}
+          onBudgetYearChange={(value) => { setFilterTahun(value); setFilterProyek('all') }}
+          onProgramChange={(value) => { setFilterProgram(value); setFilterProyek('all') }}
+          onSubKegiatanChange={(value) => { setFilterSubKegiatan(value); setFilterProyek('all') }}
           total={filtered.length}
           itemLabel="masalah"
           className="mb-5"

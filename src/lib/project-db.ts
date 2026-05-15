@@ -17,6 +17,19 @@ export const paketInclude = {
       },
     },
   },
+  subKegiatan: {
+    include: {
+      kegiatan: {
+        include: {
+          program: {
+            include: {
+              tahunAnggaran: true,
+            },
+          },
+        },
+      },
+    },
+  },
   kontrak: { orderBy: { createdAt: 'desc' as const } },
   laporanHarianBaru: {
     orderBy: { createdAt: 'desc' as const },

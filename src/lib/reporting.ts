@@ -80,13 +80,51 @@ export const getProjectBudgetYears = (projects: any[]) => {
   return Array.from(new Set(projects.map(getProjectBudgetYear))).sort((a, b) => b - a)
 }
 
+export const getProjectPrograms = (projects: any[]) => {
+  return Array.from(new Set(projects.map((project) => String(project?.program || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b))
+}
+
+export const getProjectSubKegiatan = (projects: any[]) => {
+  return Array.from(new Set(projects.map((project) => String(project?.subKegiatan || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b))
+}
+
 export const filterProjectsByBudgetYear = (projects: any[], budgetYear = 'all') => {
   if (budgetYear === 'all') return projects
   return projects.filter((project) => String(getProjectBudgetYear(project)) === String(budgetYear))
 }
 
-export const filterProjectsByScope = (projects: any[], category: string, packageType: string, workStage = 'all', budgetYear = 'all') => {
-  return filterProjectsByBudgetYear(filterProjectsByWorkStage(filterProjectsByPackageType(filterProjectsByCategory(projects, category), packageType), workStage), budgetYear)
+export const filterProjectsByProgram = (projects: any[], program = 'all') => {
+  if (program === 'all') return projects
+  return projects.filter((project) => String(project?.program || '') === program)
+}
+
+export const filterProjectsBySubKegiatan = (projects: any[], subKegiatan = 'all') => {
+  if (subKegiatan === 'all') return projects
+  return projects.filter((project) => String(project?.subKegiatan || '') === subKegiatan)
+}
+
+export const filterProjectsByScope = (
+  projects: any[],
+  category: string,
+  packageType: string,
+  workStage = 'all',
+  budgetYear = 'all',
+  program = 'all',
+  subKegiatan = 'all'
+) => {
+  return filterProjectsBySubKegiatan(
+    filterProjectsByProgram(
+      filterProjectsByBudgetYear(
+        filterProjectsByWorkStage(
+          filterProjectsByPackageType(filterProjectsByCategory(projects, category), packageType),
+          workStage
+        ),
+        budgetYear
+      ),
+      program
+    ),
+    subKegiatan
+  )
 }
 
 const getWeekNumber = (date: Date) => {

@@ -57,6 +57,19 @@ export async function GET() {
             },
           },
         },
+        subKegiatan: {
+          include: {
+            kegiatan: {
+              include: {
+                program: {
+                  include: {
+                    tahunAnggaran: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         kontrak: { orderBy: { createdAt: 'desc' } },
         laporanHarianBaru: {
           orderBy: { createdAt: 'desc' },

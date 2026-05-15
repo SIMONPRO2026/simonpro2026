@@ -186,6 +186,10 @@ export interface Proyek {
   status: ProjectStatus
   kategoriPekerjaan: ProjectCategory
   jenisProyek?: 'konsultan_perencanaan' | 'fisik' | 'konsultan_pengawasan' | string
+  tahunAnggaran?: number
+  program?: string
+  kegiatan?: string
+  subKegiatan?: string
   health?: ProjectHealth
   progressFisik: number
   progressKeuangan: number

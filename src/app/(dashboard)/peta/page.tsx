@@ -4,7 +4,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { Topbar } from '@/components/layout/Topbar'
 import { Proyek } from '@/types'
 import { formatCurrency, getHealthBadge, getStatusLabel } from '@/lib/utils'
-import { PROJECT_CATEGORIES, PROJECT_PACKAGE_TYPES, PROJECT_WORK_STAGES, filterProjectsByScope, getProjectCategoryLabel, getProjectPackageType, getProjectPackageTypeLabel, getProjectWorkStage, getProjectWorkStageLabel } from '@/lib/reporting'
+import { PROJECT_CATEGORIES, PROJECT_PACKAGE_TYPES, PROJECT_WORK_STAGES, filterProjectsByScope, getProjectBudgetYear, getProjectBudgetYears, getProjectCategoryLabel, getProjectPackageType, getProjectPackageTypeLabel, getProjectPrograms, getProjectSubKegiatan, getProjectWorkStage, getProjectWorkStageLabel } from '@/lib/reporting'
 import { X, MapPin, TrendingDown, TrendingUp, Camera, MessageSquare, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 
@@ -18,8 +18,14 @@ export default function PetaPage() {
   const [filterKategori, setFilterKategori] = useState('all')
   const [filterJenisProyek, setFilterJenisProyek] = useState('all')
   const [filterTahap, setFilterTahap] = useState('all')
+  const [filterTahun, setFilterTahun] = useState('all')
+  const [filterProgram, setFilterProgram] = useState('all')
+  const [filterSubKegiatan, setFilterSubKegiatan] = useState('all')
   const [mapReady, setMapReady] = useState(false)
-  const visibleProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap)
+  const budgetYears = getProjectBudgetYears(projects)
+  const programs = getProjectPrograms(projects)
+  const subKegiatanOptions = getProjectSubKegiatan(projects)
+  const visibleProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap, filterTahun, filterProgram, filterSubKegiatan)
 
   const stats = {
     total: visibleProjects.length,
@@ -113,9 +119,12 @@ export default function PetaPage() {
       const matchCategory = filterKategori === 'all' || (project as any).kategoriPekerjaan === filterKategori
       const matchPackageType = filterJenisProyek === 'all' || getProjectPackageType(project) === filterJenisProyek
       const matchWorkStage = filterTahap === 'all' || getProjectWorkStage(project) === filterTahap
-      marker.setOpacity(matchHealth && matchCategory && matchPackageType && matchWorkStage ? 1 : 0.12)
+      const matchYear = filterTahun === 'all' || String(getProjectBudgetYear(project)) === String(filterTahun)
+      const matchProgram = filterProgram === 'all' || (project as any).program === filterProgram
+      const matchSubKegiatan = filterSubKegiatan === 'all' || (project as any).subKegiatan === filterSubKegiatan
+      marker.setOpacity(matchHealth && matchCategory && matchPackageType && matchWorkStage && matchYear && matchProgram && matchSubKegiatan ? 1 : 0.12)
     })
-  }, [filter, filterKategori, filterJenisProyek, filterTahap, mapReady])
+  }, [filter, filterKategori, filterJenisProyek, filterTahap, filterTahun, filterProgram, filterSubKegiatan, mapReady])
 
   const filtered = filter === 'all' ? visibleProjects : visibleProjects.filter(p => p.health === filter)
 
@@ -152,6 +161,21 @@ export default function PetaPage() {
               className="w-full sm:w-auto border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-600">
               <option value="all">Semua Tahap</option>
               {PROJECT_WORK_STAGES.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
+            </select>
+            <select value={filterTahun} onChange={e => setFilterTahun(e.target.value)}
+              className="w-full sm:w-auto border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-600">
+              <option value="all">Semua Tahun</option>
+              {budgetYears.map(year => <option key={year} value={year}>{year}</option>)}
+            </select>
+            <select value={filterProgram} onChange={e => setFilterProgram(e.target.value)}
+              className="w-full sm:w-auto border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-600">
+              <option value="all">Semua Program</option>
+              {programs.map(program => <option key={program} value={program}>{program}</option>)}
+            </select>
+            <select value={filterSubKegiatan} onChange={e => setFilterSubKegiatan(e.target.value)}
+              className="w-full sm:w-auto border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-600">
+              <option value="all">Semua Sub Kegiatan</option>
+              {subKegiatanOptions.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
             <span className="text-xs text-slate-500">Filter:</span>
             {(['all', 'on_track', 'warning', 'kritis'] as const).map(f => {
