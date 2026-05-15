@@ -4,27 +4,16 @@ import { useAppStore } from '@/store/useAppStore'
 import { Topbar } from '@/components/layout/Topbar'
 import { Modal, ConfirmDialog, FormField, Input, Select, EmptyState, ActionButtons, StatusBadge } from '@/components/ui'
 import { getRoleLabel, getInitials } from '@/lib/utils'
+import { ROLE_DEFINITIONS, getRoleDefinition } from '@/lib/roles'
 import { User, Role } from '@/types'
 import { Users, Plus, Search, Shield, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const ROLES: { val: Role; label: string; desc: string }[] = [
-  { val: 'super_admin', label: 'Super Admin', desc: 'Akses tertinggi sistem' },
-  { val: 'admin', label: 'Administrator', desc: 'Akses penuh semua fitur' },
-  { val: 'ppk', label: 'PPK', desc: 'Pejabat Pembuat Komitmen' },
-  { val: 'kabid', label: 'Kabid', desc: 'Kepala bidang teknis' },
-  { val: 'direksi_teknis', label: 'Direksi Teknis', desc: 'Pengarah teknis pekerjaan' },
-  { val: 'pimpinan', label: 'Pimpinan', desc: 'Kepala Dinas / Pimpinan' },
-  { val: 'pptk', label: 'PPTK', desc: 'Pejabat Pelaksana Teknis Kegiatan' },
-  { val: 'tim_perencanaan', label: 'Tim Perencana (Rutin)', desc: 'Tim survey dan perencanaan rutin' },
-  { val: 'tim_pengawasan', label: 'Pengawas (Rutin)', desc: 'Tim pengawasan pekerjaan rutin' },
-  { val: 'konsultan_perencana', label: 'Konsultan Perencana', desc: 'Konsultan perencana proyek' },
-  { val: 'konsultan_pengawasan', label: 'Konsultan Pengawas', desc: 'Konsultan pengawas proyek' },
-  { val: 'kontraktor', label: 'Kontraktor/Penyedia', desc: 'Pelaksana atau penyedia pekerjaan' },
-]
+const ROLES = ROLE_DEFINITIONS
 
 const ROLE_COLORS: Record<Role, string> = {
-  super_admin: 'red', admin: 'red', ppk: 'blue', kabid: 'purple', direksi_teknis: 'blue', pimpinan: 'purple',
+  super_admin: 'red', admin: 'red', pejabat_pengadaan: 'amber', pphp: 'cyan', administrasi_kontrak: 'slate',
+  ppk: 'blue', kabid: 'purple', direksi_teknis: 'blue', pimpinan: 'purple',
   pptk: 'green', tim_perencanaan: 'teal', tim_pengawasan: 'orange',
   konsultan_perencana: 'indigo', konsultan_pengawasan: 'slate', kontraktor: 'green',
 }
@@ -110,10 +99,7 @@ export default function PenggunaPage() {
     }
   }
 
-  const roleColors: Record<string, any> = {
-    admin: 'red', ppk: 'blue', pimpinan: 'purple', pptk: 'green',
-    tim_perencanaan: 'blue', tim_pengawasan: 'yellow', konsultan_perencana: 'purple', konsultan_pengawasan: 'slate',
-  }
+  const roleColors: Record<string, any> = ROLE_COLORS
 
   return (
     <>
@@ -123,7 +109,7 @@ export default function PenggunaPage() {
         <div className="grid grid-cols-4 gap-3 mb-5">
           {[
             { label: 'Total User', val: users.length, bg: 'bg-white', color: 'text-slate-800' },
-            { label: 'Staff Dinas', val: users.filter(u => ['ppk','pptk','pimpinan','tim_perencanaan','tim_pengawasan','admin','super_admin'].includes(u.role)).length, bg: 'bg-blue-50', color: 'text-blue-700' },
+            { label: 'Staff Dinas', val: users.filter(u => ['ppk','pptk','pimpinan','tim_perencanaan','tim_pengawasan','admin','super_admin','pejabat_pengadaan','pphp','administrasi_kontrak'].includes(u.role)).length, bg: 'bg-blue-50', color: 'text-blue-700' },
             { label: 'Konsultan', val: users.filter(u => u.role.startsWith('konsultan')).length, bg: 'bg-purple-50', color: 'text-purple-700' },
             { label: 'Admin', val: users.filter(u => u.role === 'admin').length, bg: 'bg-red-50', color: 'text-red-700' },
           ].map(s => (
@@ -161,12 +147,12 @@ export default function PenggunaPage() {
               const colorMap: Record<string, string> = {
                 red: 'bg-red-100 text-red-700', blue: 'bg-blue-100 text-blue-700',
                 purple: 'bg-purple-100 text-purple-700', green: 'bg-green-100 text-green-700',
-                yellow: 'bg-amber-100 text-amber-700', slate: 'bg-slate-100 text-slate-600',
-                teal: 'bg-teal-100 text-teal-700',
+                yellow: 'bg-amber-100 text-amber-700', amber: 'bg-amber-100 text-amber-700', slate: 'bg-slate-100 text-slate-600',
+                teal: 'bg-teal-100 text-teal-700', orange: 'bg-orange-100 text-orange-700', cyan: 'bg-cyan-100 text-cyan-700', indigo: 'bg-indigo-100 text-indigo-700',
               }
               const avatarMap: Record<string, string> = {
                 red: 'bg-red-500', blue: 'bg-blue-500', purple: 'bg-purple-500',
-                green: 'bg-green-500', yellow: 'bg-amber-500', slate: 'bg-slate-500', teal: 'bg-teal-500',
+                green: 'bg-green-500', yellow: 'bg-amber-500', amber: 'bg-amber-500', slate: 'bg-slate-500', teal: 'bg-teal-500', orange: 'bg-orange-500', cyan: 'bg-cyan-500', indigo: 'bg-indigo-500',
               }
               return (
                 <div key={u.id} className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all ${u.id === currentUser?.id ? 'border-blue-300 ring-1 ring-blue-200' : 'border-slate-100'}`}>
@@ -257,7 +243,7 @@ export default function PenggunaPage() {
               <Input value={form.jabatan} onChange={e => f('jabatan', e.target.value)} placeholder="Kepala Seksi..." />
             </FormField>
           </div>
-          {(form.role === 'konsultan_perencana' || form.role === 'konsultan_pengawasan') && (
+          {['konsultan_perencana', 'konsultan_pengawasan', 'kontraktor', 'pphp', 'administrasi_kontrak', 'pejabat_pengadaan'].includes(form.role) && (
             <FormField label="Akses Proyek" hint="pilih proyek yang dapat diakses konsultan">
               <div className="space-y-2 max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3">
                 {projects.map(p => (
@@ -273,6 +259,19 @@ export default function PenggunaPage() {
               </div>
             </FormField>
           )}
+          <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
+            <div className="text-xs font-bold text-blue-800">Tugas dan Hak {getRoleDefinition(form.role).label}</div>
+            <div className="mt-2 grid gap-3 md:grid-cols-2">
+              <div>
+                <div className="mb-1 text-[10px] font-bold uppercase text-blue-500">Tugas</div>
+                {getRoleDefinition(form.role).tugas.map((item) => <div key={item} className="text-xs text-blue-950">- {item}</div>)}
+              </div>
+              <div>
+                <div className="mb-1 text-[10px] font-bold uppercase text-blue-500">Hak Akses</div>
+                {getRoleDefinition(form.role).hak.map((item) => <div key={item} className="text-xs text-blue-950">- {item}</div>)}
+              </div>
+            </div>
+          </div>
         </div>
       </Modal>
 
@@ -294,6 +293,19 @@ export default function PenggunaPage() {
               {viewTarget.nip && <div className="flex justify-between"><span className="text-slate-500">NIP</span><span className="font-mono">{viewTarget.nip}</span></div>}
               {viewTarget.jabatan && <div className="flex justify-between"><span className="text-slate-500">Jabatan</span><span className="font-medium">{viewTarget.jabatan}</span></div>}
               <div className="flex justify-between"><span className="text-slate-500">ID Sistem</span><span className="font-mono text-xs">{viewTarget.id}</span></div>
+            </div>
+            <div className="border-t border-slate-100 pt-3">
+              <div className="text-xs font-semibold text-slate-500 mb-2">Tugas dan Hak Akses</div>
+              <div className="grid gap-2 text-xs">
+                <div className="rounded-lg bg-slate-50 p-2">
+                  <div className="font-semibold text-slate-700">Tugas</div>
+                  {getRoleDefinition(viewTarget.role).tugas.map((item) => <div key={item} className="text-slate-500">- {item}</div>)}
+                </div>
+                <div className="rounded-lg bg-slate-50 p-2">
+                  <div className="font-semibold text-slate-700">Hak</div>
+                  {getRoleDefinition(viewTarget.role).hak.map((item) => <div key={item} className="text-slate-500">- {item}</div>)}
+                </div>
+              </div>
             </div>
             {viewTarget.projectIds && viewTarget.projectIds.length > 0 && (
               <div className="border-t border-slate-100 pt-3">

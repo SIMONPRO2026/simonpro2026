@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { fromApprovalStatus, getMappedPaket, logAudit, toApprovalStatus, toHealthStatus, toPrioritas, toStatusMasalah } from '@/lib/project-db'
@@ -16,7 +17,7 @@ async function saveFotos(entityType: string, entityId: string, uploadedBy: strin
       entityId,
       url: foto.url,
       keterangan: foto.keterangan || null,
-      koordinat: foto.koordinat || null,
+      koordinat: (foto.koordinat || Prisma.JsonNull) as Prisma.InputJsonValue,
       uploadedBy,
       ...relation,
     })),

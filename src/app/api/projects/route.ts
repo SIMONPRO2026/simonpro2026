@@ -3,11 +3,18 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureDefaultSubKegiatan, getMappedPaket, logAudit, toHealthStatus, toKategoriFisik, toPaketJenis, toPaketStatus } from '@/lib/project-db'
 
+const PROJECT_MANAGER_ROLES = new Set(['super_admin', 'admin', 'ppk', 'pptk', 'pejabat_pengadaan', 'administrasi_kontrak'])
+
 export async function POST(request: Request) {
   const session = await auth()
 
   if (!session?.user?.id) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+  }
+
+  const role = String((session.user as any).role || '')
+  if (!PROJECT_MANAGER_ROLES.has(role)) {
+    return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
   }
 
   const body = await request.json()

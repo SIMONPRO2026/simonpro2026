@@ -1,11 +1,20 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { signOut } from 'next-auth/react'
 import { useAppStore } from '@/store/useAppStore'
-import { getRoleLabel, getDashboardRoleLabel, getInitials, formatDateTime } from '@/lib/utils'
-import { Bell, ChevronDown, LogOut } from 'lucide-react'
-import Link from 'next/link'
+import { formatDateTime, getDashboardRoleLabel, getInitials, getRoleLabel } from '@/lib/utils'
+import {
+  AlertTriangle,
+  Bell,
+  Bot,
+  ChevronDown,
+  ClipboardList,
+  LogOut,
+  Megaphone,
+  MessageSquare,
+} from 'lucide-react'
 
 interface TopbarProps {
   title: string
@@ -13,211 +22,253 @@ interface TopbarProps {
   action?: React.ReactNode
 }
 
+type NotificationItem = {
+  href: string
+  title: string
+  desc: string
+  tone: 'red' | 'amber' | 'blue'
+  icon: typeof Bell
+}
+
+const toneClass: Record<NotificationItem['tone'], string> = {
+  red: 'bg-red-50 text-red-700',
+  amber: 'bg-amber-50 text-amber-700',
+  blue: 'bg-blue-50 text-blue-700',
+}
+
 export function Topbar({ title, subtitle, action }: TopbarProps) {
-  const { currentUser, sidebarOpen, setSidebarOpen, projects, auditLogs, logout } = useAppStore()
-  const router = useRouter()
+  const { currentUser, sidebarOpen, projects, auditLogs, logout } = useAppStore()
   const [showNotif, setShowNotif] = useState(false)
   const [showUser, setShowUser] = useState(false)
 
-  // Count alerts
-  const openMasalah = projects.reduce((s, p) => s + p.masalah.filter(m => m.status === 'open').length, 0)
-  const laporanMenunggu = projects.reduce((s, p) => s + p.laporanHarian.filter(l => !l.disetujui).length, 0)
-  const totalNotif = openMasalah + laporanMenunggu
-  const proyekKritis = projects.filter(p => p.health === 'kritis')
-
+  const openMasalah = projects.reduce((sum, project) => sum + project.masalah.filter((item) => item.status === 'open').length, 0)
+  const laporanMenunggu = projects.reduce((sum, project) => sum + project.laporanHarian.filter((item) => !item.disetujui).length, 0)
+  const totalChat = projects.reduce((sum, project) => sum + project.chat.length, 0)
+  const proyekKritis = projects.filter((project) => project.health === 'kritis')
+  const proyekWarning = projects.filter((project) => project.health === 'warning')
   const recentLogs = auditLogs.slice(0, 5)
+
+  const notifications = useMemo<NotificationItem[]>(() => {
+    const items: NotificationItem[] = []
+
+    if (laporanMenunggu > 0) {
+      items.push({
+        href: '/laporan',
+        title: `${laporanMenunggu} laporan menunggu persetujuan`,
+        desc: 'Perlu validasi PPK agar progress sah.',
+        tone: 'amber',
+        icon: ClipboardList,
+      })
+    }
+
+    if (openMasalah > 0) {
+      items.push({
+        href: '/masalah',
+        title: `${openMasalah} masalah proyek masih open`,
+        desc: 'Perlu PIC, batas waktu, dan tindak lanjut.',
+        tone: 'red',
+        icon: AlertTriangle,
+      })
+    }
+
+    if (proyekKritis.length > 0) {
+      items.push({
+        href: '/proyek',
+        title: `${proyekKritis.length} proyek kritis`,
+        desc: proyekKritis.map((project) => project.kode).join(', '),
+        tone: 'red',
+        icon: Bot,
+      })
+    }
+
+    if (proyekWarning.length > 0) {
+      items.push({
+        href: '/proyek',
+        title: `${proyekWarning.length} peringatan AI`,
+        desc: 'AI menyarankan evaluasi deviasi sebelum menjadi kritis.',
+        tone: 'amber',
+        icon: Bot,
+      })
+    }
+
+    if (totalChat > 0) {
+      items.push({
+        href: '/chat',
+        title: `${totalChat} pesan chat proyek`,
+        desc: 'Buka komunikasi proyek untuk memantau koordinasi terbaru.',
+        tone: 'blue',
+        icon: MessageSquare,
+      })
+    }
+
+    items.push({
+      href: '/pengumuman',
+      title: 'Pengumuman sistem',
+      desc: 'Cek instruksi dan informasi terbaru dari admin.',
+      tone: 'blue',
+      icon: Megaphone,
+    })
+
+    return items
+  }, [laporanMenunggu, openMasalah, proyekKritis, proyekWarning, totalChat])
+
   const dashboardTitle = `Dashboard ${getDashboardRoleLabel(currentUser?.role || 'pptk')}`
   const pageContext = subtitle ? `${title} - ${subtitle}` : title
+  const totalNotif = notifications.length
 
   const handleLogout = () => {
     logout()
     signOut({ callbackUrl: '/login' })
   }
 
-  // Close dropdowns on click outside
   useEffect(() => {
-    const handler = () => { setShowNotif(false); setShowUser(false) }
+    const handler = () => {
+      setShowNotif(false)
+      setShowUser(false)
+    }
     document.addEventListener('click', handler)
     return () => document.removeEventListener('click', handler)
   }, [])
 
+  const NotificationPanel = ({ mobile = false }: { mobile?: boolean }) => (
+    <div className={mobile
+      ? 'fixed left-3 right-3 top-16 z-50 max-h-[70vh] overflow-y-auto rounded-xl border border-slate-100 bg-white shadow-xl'
+      : 'absolute right-0 top-11 z-50 w-80 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-xl'}
+    >
+      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+        <span className="text-sm font-semibold text-slate-800">Notifikasi</span>
+        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">{totalNotif}</span>
+      </div>
+
+      <div className={mobile ? '' : 'max-h-80 overflow-y-auto'}>
+        {notifications.map((item) => {
+          const Icon = item.icon
+          return (
+            <Link key={`${mobile ? 'm-' : ''}${item.href}-${item.title}`} href={item.href} onClick={() => setShowNotif(false)}>
+              <div className="flex items-start gap-3 border-b border-slate-50 px-4 py-3 transition-colors hover:bg-slate-50">
+                <div className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ${toneClass[item.tone]}`}>
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-800">{item.title}</div>
+                  <div className="mt-0.5 text-xs text-slate-500">{item.desc}</div>
+                </div>
+              </div>
+            </Link>
+          )
+        })}
+
+        <div className="border-t border-slate-100 bg-slate-50 px-4 py-2">
+          <div className="mb-2 text-xs font-semibold text-slate-500">Aktivitas Terbaru</div>
+          {recentLogs.length === 0 ? (
+            <div className="py-2 text-xs text-slate-400">Belum ada aktivitas.</div>
+          ) : recentLogs.map((log) => (
+            <div key={log.id} className="flex items-center gap-2 py-1.5">
+              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-100">
+                <ClipboardList className="h-3.5 w-3.5 text-blue-700" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[11px] text-slate-700">{log.detail || log.action}</div>
+                <div className="text-[10px] text-slate-400">{log.userName} - {formatDateTime(log.timestamp)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <header
-      className="app-topbar fixed top-0 right-0 z-30 bg-white border-b border-slate-100 flex items-center px-3 md:px-5 h-14 gap-3 transition-all duration-300"
+      className="app-topbar fixed right-0 top-0 z-30 flex h-14 items-center gap-3 border-b border-slate-100 bg-white px-3 transition-all duration-300 md:px-5"
       style={{ ['--sidebar-left' as string]: `${sidebarOpen ? 210 : 60}px` }}
     >
-      {/* Title */}
-      <div className="flex-1 min-w-0">
-        <h1 className="text-sm md:text-sm font-bold text-slate-800 truncate leading-tight">{dashboardTitle}</h1>
-        <p className="text-[11px] text-slate-400 leading-tight truncate hidden md:block">{pageContext}</p>
+      <div className="min-w-0 flex-1">
+        <h1 className="truncate text-sm font-bold leading-tight text-slate-800">{dashboardTitle}</h1>
+        <p className="truncate text-[11px] leading-tight text-slate-500">{currentUser?.name || 'Pengguna SIMONPRO'}</p>
+        <p className="hidden truncate text-[10px] leading-tight text-slate-400 md:block">{pageContext}</p>
       </div>
 
-      {/* Back button / action */}
       {action && <div className="flex-shrink-0">{action}</div>}
 
-      {/* Desktop extras */}
-      <div className="hidden md:flex items-center gap-2">
-        {/* Notification Bell */}
-        <div className="relative" onClick={e => e.stopPropagation()}>
-          <button
-            onClick={() => { setShowNotif(!showNotif); setShowUser(false) }}
-            className="relative w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
-          >
-            <Bell className="w-4 h-4 text-slate-600" />
-            {totalNotif > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center">
-                {totalNotif > 9 ? '9+' : totalNotif}
-              </span>
-            )}
-          </button>
-
-          {showNotif && (
-            <div className="absolute right-0 top-11 w-80 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden fade-in">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                <span className="text-sm font-semibold text-slate-800">Notifikasi</span>
-                {totalNotif > 0 && (
-                  <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold">{totalNotif}</span>
-                )}
-              </div>
-
-              <div className="max-h-80 overflow-y-auto">
-                {laporanMenunggu > 0 && (
-                  <Link href="/laporan" onClick={() => setShowNotif(false)}>
-                    <div className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-50 transition-colors">
-                      <div className="w-8 h-8 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-base">📋</span>
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-slate-800">{laporanMenunggu} Laporan Menunggu Persetujuan</div>
-                        <div className="text-xs text-slate-500 mt-0.5">Laporan harian belum disetujui PPK</div>
-                      </div>
-                    </div>
-                  </Link>
-                )}
-
-                {openMasalah > 0 && (
-                  <Link href="/masalah" onClick={() => setShowNotif(false)}>
-                    <div className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-50 transition-colors">
-                      <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-base">⚠️</span>
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-slate-800">{openMasalah} Masalah Open</div>
-                        <div className="text-xs text-slate-500 mt-0.5">Masalah proyek belum diselesaikan</div>
-                      </div>
-                    </div>
-                  </Link>
-                )}
-
-                {proyekKritis.length > 0 && (
-                  <Link href="/proyek" onClick={() => setShowNotif(false)}>
-                    <div className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-50 transition-colors">
-                      <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-base">🚨</span>
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-slate-800">{proyekKritis.length} Proyek Kritis</div>
-                        <div className="text-xs text-slate-500 mt-0.5">{proyekKritis.map(p => p.kode).join(', ')}</div>
-                      </div>
-                    </div>
-                  </Link>
-                )}
-
-                {totalNotif === 0 && (
-                  <div className="px-4 py-6 text-center text-slate-400">
-                    <div className="text-2xl mb-1">✅</div>
-                    <div className="text-sm">Tidak ada notifikasi baru</div>
-                  </div>
-                )}
-
-                <div className="px-4 py-2 bg-slate-50 border-t border-slate-100">
-                  <div className="text-xs text-slate-500 font-semibold mb-2">Aktivitas Terbaru</div>
-                  {recentLogs.map(log => (
-                    <div key={log.id} className="flex items-center gap-2 py-1.5">
-                      <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs flex-shrink-0">
-                        {log.action === 'LOGIN' ? '🔑' : log.action.includes('LAPORAN') ? '📝' : log.action.includes('MASALAH') ? '⚠️' : '📋'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[11px] text-slate-700 truncate">{log.detail}</div>
-                        <div className="text-[10px] text-slate-400">{log.userName}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* User menu */}
-        <div className="relative" onClick={e => e.stopPropagation()}>
-          <button
-            onClick={() => { setShowUser(!showUser); setShowNotif(false) }}
-            className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl hover:bg-slate-100 transition-colors"
-          >
-            <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
-              {getInitials(currentUser?.name || 'U')}
-            </div>
-            <div className="hidden lg:block text-left">
-              <div className="text-xs font-semibold text-slate-800 leading-tight">
-                {currentUser?.name?.split(' ').slice(0, 2).join(' ')}
-              </div>
-              <div className="text-[10px] text-slate-400 leading-tight">{getRoleLabel(currentUser?.role || 'pptk')}</div>
-            </div>
-            <ChevronDown className="w-3 h-3 text-slate-400 hidden lg:block" />
-          </button>
-
-          {showUser && (
-            <div className="absolute right-0 top-11 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden fade-in">
-              {/* User info */}
-              <div className="px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-800">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm">
-                    {getInitials(currentUser?.name || 'U')}
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold text-white">{currentUser?.name?.split(' ').slice(0, 2).join(' ')}</div>
-                    <div className="text-xs text-blue-200">{getRoleLabel(currentUser?.role || 'pptk')}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="py-1">
-                <Link href="/pengaturan" onClick={() => setShowUser(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-                  <span className="text-base">⚙️</span> Pengaturan
-                </Link>
-                <Link href="/panduan" onClick={() => setShowUser(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-                  <span className="text-base">📖</span> Panduan
-                </Link>
-                <Link href="/audit-log" onClick={() => setShowUser(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-                  <span className="text-base">📋</span> Audit Log
-                </Link>
-                <div className="mx-4 my-1 border-t border-slate-100" />
-                <button onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium">
-                  <LogOut className="w-4 h-4" /> Keluar
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile: just notification bell */}
-      <div className="md:hidden relative" onClick={e => e.stopPropagation()}>
-        <button onClick={() => setShowNotif(!showNotif)}
-          className="relative w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-          <Bell className="w-4 h-4 text-slate-600" />
+      <div className="relative" onClick={(event) => event.stopPropagation()}>
+        <button
+          onClick={() => {
+            setShowNotif(!showNotif)
+            setShowUser(false)
+          }}
+          className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 transition-colors hover:bg-slate-200"
+          title="Notifikasi"
+        >
+          <Bell className="h-4 w-4 text-slate-600" />
           {totalNotif > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center">
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
               {totalNotif > 9 ? '9+' : totalNotif}
             </span>
           )}
         </button>
+        {showNotif && (
+          <>
+            <div className="hidden md:block"><NotificationPanel /></div>
+            <div className="md:hidden"><NotificationPanel mobile /></div>
+          </>
+        )}
+      </div>
+
+      <div className="relative hidden md:block" onClick={(event) => event.stopPropagation()}>
+        <button
+          onClick={() => {
+            setShowUser(!showUser)
+            setShowNotif(false)
+          }}
+          className="flex items-center gap-2 rounded-xl py-1 pl-1 pr-2 transition-colors hover:bg-slate-100"
+        >
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+            {getInitials(currentUser?.name || 'U')}
+          </div>
+          <div className="hidden text-left lg:block">
+            <div className="text-xs font-semibold leading-tight text-slate-800">
+              {currentUser?.name?.split(' ').slice(0, 2).join(' ')}
+            </div>
+            <div className="text-[10px] leading-tight text-slate-400">{getRoleLabel(currentUser?.role || 'pptk')}</div>
+          </div>
+          <ChevronDown className="hidden h-3 w-3 text-slate-400 lg:block" />
+        </button>
+
+        {showUser && (
+          <div className="absolute right-0 top-11 z-50 w-56 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-xl">
+            <div className="bg-gradient-to-br from-blue-600 to-blue-800 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white">
+                  {getInitials(currentUser?.name || 'U')}
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white">{currentUser?.name?.split(' ').slice(0, 2).join(' ')}</div>
+                  <div className="text-xs text-blue-200">{getRoleLabel(currentUser?.role || 'pptk')}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="py-1">
+              <Link href="/pengaturan" onClick={() => setShowUser(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                Pengaturan
+              </Link>
+              <Link href="/panduan" onClick={() => setShowUser(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                Panduan
+              </Link>
+              <Link href="/audit-log" onClick={() => setShowUser(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                Audit Log
+              </Link>
+              <div className="mx-4 my-1 border-t border-slate-100" />
+              <button onClick={handleLogout} className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">
+                <LogOut className="h-4 w-4" /> Keluar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   )
 }
+
+export default Topbar

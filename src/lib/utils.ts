@@ -1,4 +1,5 @@
 import { Role, ProjectHealth, ProjectStatus } from '@/types'
+import { getRoleDefinition } from '@/lib/roles'
 
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('id-ID', {
@@ -35,27 +36,16 @@ export function formatTime(dateStr: string): string {
 }
 
 export function getRoleLabel(role: Role): string {
-  const labels: Record<Role, string> = {
-    super_admin: 'Super Admin',
-    admin: 'Administrator',
-    kabid: 'Kepala Bidang',
-    direksi_teknis: 'Direksi Teknis',
-    pptk: 'PPTK',
-    ppk: 'PPK',
-    pimpinan: 'Pimpinan',
-    tim_perencanaan: 'Tim Perencana (Rutin)',
-    tim_pengawasan: 'Pengawas (Rutin)',
-    konsultan_perencana: 'Konsultan Perencana',
-    konsultan_pengawasan: 'Konsultan Pengawas',
-    kontraktor: 'Kontraktor/Penyedia',
-  }
-  return labels[role] || role
+  return getRoleDefinition(role).label
 }
 
 export function getDashboardRoleLabel(role: Role): string {
   const labels: Record<Role, string> = {
     super_admin: 'Super Admin',
     admin: 'Admin',
+    pejabat_pengadaan: 'Pejabat Pengadaan',
+    pphp: 'PPHP',
+    administrasi_kontrak: 'Administrasi Kontrak',
     kabid: 'Kabid',
     direksi_teknis: 'Direksi Teknis',
     pptk: 'PPTK',
@@ -123,18 +113,20 @@ export function canAccess(role: Role, permission: string): boolean {
   if (role === 'super_admin') return true
 
   const permissions: Record<string, Role[]> = {
-    approve_laporan: ['ppk', 'admin'],
-    create_laporan: ['pptk', 'admin'],
-    delete_laporan: ['admin'],
-    upload_rab: ['konsultan_perencana', 'tim_perencanaan', 'admin'],
+    approve_laporan: ['ppk', 'admin', 'pphp'],
+    create_laporan: ['pptk', 'admin', 'tim_pengawasan', 'konsultan_pengawasan'],
+    delete_laporan: ['admin', 'ppk'],
+    upload_rab: ['konsultan_perencana', 'tim_perencanaan', 'admin', 'pejabat_pengadaan'],
     approve_rab: ['ppk', 'admin'],
-    create_survey: ['tim_perencanaan', 'konsultan_perencana', 'admin'],
-    view_audit_log: ['admin', 'ppk', 'pimpinan'],
+    create_survey: ['tim_perencanaan', 'konsultan_perencana', 'admin', 'pptk'],
+    view_audit_log: ['admin', 'ppk', 'pimpinan', 'kabid'],
     manage_users: ['admin', 'super_admin'],
-    view_keuangan: ['ppk', 'pimpinan', 'admin'],
-    create_catatan_pengawasan: ['tim_pengawasan', 'konsultan_pengawasan', 'admin'],
-    create_masalah: ['pptk', 'tim_pengawasan', 'konsultan_pengawasan', 'admin'],
-    resolve_masalah: ['ppk', 'pptk', 'admin'],
+    view_keuangan: ['ppk', 'pimpinan', 'admin', 'kabid', 'pejabat_pengadaan', 'administrasi_kontrak'],
+    create_catatan_pengawasan: ['tim_pengawasan', 'konsultan_pengawasan', 'admin', 'direksi_teknis', 'pphp'],
+    create_masalah: ['pptk', 'tim_pengawasan', 'konsultan_pengawasan', 'admin', 'pphp'],
+    resolve_masalah: ['ppk', 'pptk', 'admin', 'direksi_teknis'],
+    manage_contracts: ['admin', 'ppk', 'pejabat_pengadaan', 'administrasi_kontrak'],
+    upload_documents: ['admin', 'ppk', 'pptk', 'administrasi_kontrak', 'pejabat_pengadaan', 'pphp'],
   }
   return permissions[permission]?.includes(role) ?? false
 }

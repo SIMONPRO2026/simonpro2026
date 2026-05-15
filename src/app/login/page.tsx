@@ -58,7 +58,7 @@ export default function LoginPage() {
               />
             </div>
             <h1 className="text-4xl font-bold tracking-normal">SIMONPRO</h1>
-            <p className="mt-2 text-lg text-blue-100">Sistem Monitoring Proyek Konstruksi</p>
+            <p className="mt-2 text-lg text-blue-100">Sistem Monitoring Proyek</p>
             <p className="mt-1 text-sm text-blue-200">Dinas PU Kota Dumai</p>
           </div>
 

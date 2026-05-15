@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getMappedPaket, logAudit, toHealthStatus, toKategoriFisik, toPaketJenis, toPaketStatus } from '@/lib/project-db'
 
-const MANAGER_ROLES = new Set(['admin', 'super_admin', 'ppk'])
+const MANAGER_ROLES = new Set(['admin', 'super_admin', 'ppk', 'pptk', 'pejabat_pengadaan', 'administrasi_kontrak'])
 
 export async function PATCH(
   request: Request,
@@ -13,6 +13,11 @@ export async function PATCH(
 
   if (!session?.user?.id) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+  }
+
+  const role = String((session.user as any).role || '')
+  if (!MANAGER_ROLES.has(role)) {
+    return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
   }
 
   const { id } = await params

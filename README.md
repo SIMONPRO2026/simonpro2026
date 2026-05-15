@@ -1,4 +1,4 @@
-# SIMONPRO - Sistem Monitoring Proyek Konstruksi
+# SIMONPRO - Sistem Monitoring Proyek
 ## Dinas PU Kota Dumai v1.0
 
 ---

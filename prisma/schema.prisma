@@ -29,6 +29,9 @@ datasource db {
 enum Role {
   SUPER_ADMIN
   ADMIN
+  PEJABAT_PENGADAAN
+  PPHP
+  ADMINISTRASI_KONTRAK
   KEPALA_DINAS       // ← BARU: ganti PIMPINAN yang ambigu
   PIMPINAN           // ← DIPERTAHANKAN untuk backward compat
   PPK

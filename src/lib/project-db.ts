@@ -213,6 +213,9 @@ export function toRole(value: unknown): Role {
   const roleMap: Record<string, Role> = {
     super_admin: Role.SUPER_ADMIN,
     admin: Role.ADMIN,
+    pejabat_pengadaan: Role.PEJABAT_PENGADAAN,
+    pphp: Role.PPHP,
+    administrasi_kontrak: Role.ADMINISTRASI_KONTRAK,
     pimpinan: Role.PIMPINAN,
     ppk: Role.PPK,
     pptk: Role.PPTK,

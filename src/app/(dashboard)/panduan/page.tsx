@@ -359,7 +359,7 @@ export default function PanduanPage() {
                   <div className="p-4 bg-slate-50 rounded-xl text-center">
                     <div className="text-xs text-slate-500">SIMONPRO v1.0.0</div>
                     <div className="text-xs text-slate-400 mt-0.5">© 2026 Dinas Pekerjaan Umum Kota Dumai</div>
-                    <div className="text-xs text-slate-400">Sistem Monitoring Proyek Konstruksi</div>
+                    <div className="text-xs text-slate-400">Sistem Monitoring Proyek</div>
                   </div>
                 </div>
               </div>

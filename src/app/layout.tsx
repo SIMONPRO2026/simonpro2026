@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'SIMONPRO - Sistem Monitoring Proyek',
-  description: 'Sistem Monitoring Proyek Konstruksi Dinas PU Kota Dumai',
+  description: 'Sistem Monitoring Proyek Dinas PU Kota Dumai',
 }
 
 export default function RootLayout({

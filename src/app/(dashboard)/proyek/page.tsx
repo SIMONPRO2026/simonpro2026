@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { Topbar } from '@/components/layout/Topbar'
 import { Modal, ConfirmDialog, FormField, Input, Select, EmptyState, ActionButtons, StatusBadge } from '@/components/ui'
-import { formatCurrency, getHealthBadge, getStatusLabel, formatDate, canAccess } from '@/lib/utils'
+import { formatCurrency, getHealthBadge, getStatusLabel, formatDate, canAccess, getRoleLabel } from '@/lib/utils'
 import { PROJECT_CATEGORIES, PROJECT_PACKAGE_TYPES, filterProjectsByScope, getProjectCategoryLabel, getProjectPackageType, getProjectPackageTypeLabel, getProjectWorkStage, getProjectWorkStageLabel } from '@/lib/reporting'
 import { ProjectScopeFilters } from '@/components/project/ProjectScopeFilters'
 import { Proyek, ProjectStatus } from '@/types'
@@ -50,7 +50,7 @@ export default function ProyekPage() {
   const kontraktorUsers = users.filter(u => u.role === 'kontraktor')
   const konsultanPerencanaUsers = users.filter(u => u.role === 'konsultan_perencana')
   const konsultanPengawasanUsers = users.filter(u => u.role === 'konsultan_pengawasan')
-  const projectTeamUsers = users.filter(u => !['super_admin', 'admin'].includes(u.role))
+  const projectTeamUsers = users.filter(u => u.role !== 'super_admin')
 
   const scopedProjects = filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap)
   const filtered = scopedProjects.filter(p => {
@@ -365,7 +365,7 @@ export default function ProyekPage() {
                     onChange={e => f('assignedUsers', e.target.checked ? [...form.assignedUsers, user.id] : form.assignedUsers.filter(id => id !== user.id))}
                   />
                   <span className="font-medium text-slate-700">{user.name}</span>
-                  <span className="ml-auto text-[10px] text-slate-400">{user.role}</span>
+                  <span className="ml-auto text-[10px] text-slate-400">{getRoleLabel(user.role)}</span>
                 </label>
               ))}
             </div>

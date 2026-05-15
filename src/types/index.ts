@@ -1,6 +1,9 @@
 export type Role =
   | 'super_admin'
   | 'admin'
+  | 'pejabat_pengadaan'
+  | 'pphp'
+  | 'administrasi_kontrak'
   | 'pptk'
   | 'ppk'
   | 'kabid'
