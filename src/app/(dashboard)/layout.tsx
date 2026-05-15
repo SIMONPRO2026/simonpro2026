@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useAppStore } from '@/store/useAppStore'
@@ -20,6 +20,7 @@ export default function DashboardLayout({
 
   const [mounted, setMounted] = useState(false)
   const [bootstrapped, setBootstrapped] = useState(false)
+  const syncVersionRef = useRef<string>('')
 
   useEffect(() => {
     setMounted(true)
@@ -38,7 +39,7 @@ export default function DashboardLayout({
     let active = true
 
     const syncData = async () => {
-      fetch('/api/bootstrap', { cache: 'no-store' })
+      return fetch('/api/bootstrap', { cache: 'no-store' })
       .then((response) => {
         if (!response.ok) throw new Error('Gagal memuat data SIMONPRO')
         return response.json()
@@ -54,16 +55,31 @@ export default function DashboardLayout({
       })
     }
 
-    syncData()
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState === 'visible') syncData()
-    }, 2000)
+    const syncIfChanged = async () => {
+      try {
+        const response = await fetch('/api/sync-version', { cache: 'no-store' })
+        if (!response.ok) throw new Error('Gagal memeriksa perubahan data')
+        const data = await response.json()
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') syncData()
+        if (!syncVersionRef.current || syncVersionRef.current !== data.version) {
+          syncVersionRef.current = data.version
+          await syncData()
+        }
+      } catch {
+        if (active) setAuthUser(null)
+      }
     }
 
-    const handleFocus = () => syncData()
+    syncData()
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') syncIfChanged()
+    }, 1000)
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') syncIfChanged()
+    }
+
+    const handleFocus = () => syncIfChanged()
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('focus', handleFocus)

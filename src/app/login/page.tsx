@@ -49,18 +49,13 @@ export default function LoginPage() {
     <div className="relative min-h-screen overflow-hidden bg-[#173b96] text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(96,165,250,0.32),transparent_28%),radial-gradient(circle_at_85%_25%,rgba(14,165,233,0.26),transparent_30%),linear-gradient(135deg,#0f2f7f_0%,#2147a3_48%,#0f2d7b_100%)]" />
 
-      <div className="pointer-events-none absolute inset-0 opacity-[0.08]">
-        <img src="/logo-sda-dumai.svg" alt="" className="absolute -left-20 top-12 h-80 w-80" />
+      <div className="pointer-events-none absolute inset-0 hidden opacity-[0.08] md:block">
+        <img src="/logo-sda-dumai.svg" alt="" className="absolute -left-20 top-12 h-80 w-80" loading="eager" />
         <div className="absolute right-10 top-20 text-[120px] font-black leading-none tracking-normal text-white/70">
           SIMONPRO
         </div>
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-18deg] whitespace-nowrap text-[84px] font-black tracking-normal text-white/80">
           Budi Legawan, ST
-        </div>
-        <div className="absolute bottom-0 left-1/2 grid -translate-x-1/2 grid-cols-5 gap-6 text-white/70">
-          {Array.from({ length: 15 }).map((_, index) => (
-            <img key={index} src="/logo-sda-dumai.svg" alt="" className="h-20 w-20" />
-          ))}
         </div>
       </div>
 
@@ -72,6 +67,7 @@ export default function LoginPage() {
                 src="/logo-sda-dumai.svg"
                 alt="Logo Bidang Sumber Daya Air Dinas PU Kota Dumai"
                 className="h-24 w-24"
+                loading="eager"
               />
             </div>
             <h1 className="text-4xl font-bold tracking-normal">SIMONPRO</h1>
