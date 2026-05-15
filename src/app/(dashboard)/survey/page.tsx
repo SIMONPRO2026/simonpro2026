@@ -29,6 +29,7 @@ export default function SurveyPage() {
   const [loadingGps, setLoadingGps] = useState(false)
   const [photos, setPhotos] = useState<string[]>([])
   const [form, setForm] = useState({ kondisiEksisting:'', dimensiP:0, dimensiL:0, dimensiT:0, material:'', permasalahan:'', rekomendasi:'' })
+  const [submitting, setSubmitting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
 
@@ -71,7 +72,7 @@ export default function SurveyPage() {
     setGps(s.koordinat); setPhotos(s.foto.map((f:any) => f.url)); setShowForm(true)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedProyekId) return toast.error('Pilih proyek terlebih dahulu')
     if (!form.kondisiEksisting.trim()) return toast.error('Kondisi eksisting wajib diisi')
     if (!form.permasalahan.trim()) return toast.error('Permasalahan wajib diisi')
@@ -89,9 +90,21 @@ export default function SurveyPage() {
       status: 'submitted' as const,
     }
 
-    if (editTarget) { updateSurvey(editTarget.proyekId, editTarget.id, data); toast.success('Survey diperbarui') }
-    else { addSurvey(selectedProyekId, data); toast.success('Survey berhasil disimpan') }
-    setShowForm(false)
+    try {
+      setSubmitting(true)
+      if (editTarget) {
+        await updateSurvey(editTarget.proyekId, editTarget.id, data)
+        toast.success('Survey diperbarui ke database')
+      } else {
+        await addSurvey(selectedProyekId, data)
+        toast.success('Survey berhasil disimpan ke database')
+      }
+      setShowForm(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan survey')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -239,8 +252,8 @@ export default function SurveyPage() {
         size="lg"
         footer={<div className="flex gap-3">
           <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-600 font-medium">Batal</button>
-          <button onClick={handleSubmit} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700">
-            {editTarget ? 'Simpan Perubahan' : 'Simpan Survey'}
+          <button onClick={handleSubmit} disabled={submitting} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-60">
+            {submitting ? 'Menyimpan...' : editTarget ? 'Simpan Perubahan' : 'Simpan Survey'}
           </button>
         </div>}>
         <div className="space-y-4">

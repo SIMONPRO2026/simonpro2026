@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { Topbar } from '@/components/layout/Topbar'
 import { formatCurrency, getHealthBadge, getStatusLabel, formatDateTime, getRoleLabel } from '@/lib/utils'
-import { filterProjectsByScope, getProjectCategoryLabel, getProjectPackageType, getProjectPackageTypeLabel, getProjectWorkStage, getProjectWorkStageLabel } from '@/lib/reporting'
+import { filterProjectsByScope, getProjectBudgetYears, getProjectCategoryLabel, getProjectPackageType, getProjectPackageTypeLabel, getProjectWorkStage, getProjectWorkStageLabel } from '@/lib/reporting'
 import { ProjectScopeFilters } from '@/components/project/ProjectScopeFilters'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts'
 import {
@@ -19,7 +19,9 @@ export default function DashboardPage() {
   const [filterKategori, setFilterKategori] = useState('all')
   const [filterJenisProyek, setFilterJenisProyek] = useState('all')
   const [filterTahap, setFilterTahap] = useState('all')
-  const visibleProjects = useMemo(() => filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap), [projects, filterKategori, filterJenisProyek, filterTahap])
+  const [filterTahun, setFilterTahun] = useState('all')
+  const budgetYears = useMemo(() => getProjectBudgetYears(projects), [projects])
+  const visibleProjects = useMemo(() => filterProjectsByScope(projects, filterKategori, filterJenisProyek, filterTahap, filterTahun), [projects, filterKategori, filterJenisProyek, filterTahap, filterTahun])
 
   const stats = useMemo(() => {
     const onTrack = visibleProjects.filter(p => p.health === 'on_track').length
@@ -124,9 +126,12 @@ export default function DashboardPage() {
           category={filterKategori}
           packageType={filterJenisProyek}
           workStage={filterTahap}
+          budgetYear={filterTahun}
+          budgetYears={budgetYears}
           onCategoryChange={setFilterKategori}
           onPackageTypeChange={setFilterJenisProyek}
           onWorkStageChange={setFilterTahap}
+          onBudgetYearChange={setFilterTahun}
           total={visibleProjects.length}
         />
 

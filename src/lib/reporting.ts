@@ -67,8 +67,26 @@ export const filterProjectsByWorkStage = (projects: any[], workStage: string) =>
   return projects.filter((project) => getProjectWorkStage(project) === workStage)
 }
 
-export const filterProjectsByScope = (projects: any[], category: string, packageType: string, workStage = 'all') => {
-  return filterProjectsByWorkStage(filterProjectsByPackageType(filterProjectsByCategory(projects, category), packageType), workStage)
+export const getProjectBudgetYear = (project: any): number => {
+  const explicitYear = Number(project?.tahun || project?.tahunAnggaran || project?.year)
+  if (explicitYear) return explicitYear
+
+  const date = project?.tanggalMulai || project?.createdAt || project?.updatedAt
+  const parsed = date ? new Date(date) : new Date()
+  return Number.isNaN(parsed.getTime()) ? new Date().getFullYear() : parsed.getFullYear()
+}
+
+export const getProjectBudgetYears = (projects: any[]) => {
+  return Array.from(new Set(projects.map(getProjectBudgetYear))).sort((a, b) => b - a)
+}
+
+export const filterProjectsByBudgetYear = (projects: any[], budgetYear = 'all') => {
+  if (budgetYear === 'all') return projects
+  return projects.filter((project) => String(getProjectBudgetYear(project)) === String(budgetYear))
+}
+
+export const filterProjectsByScope = (projects: any[], category: string, packageType: string, workStage = 'all', budgetYear = 'all') => {
+  return filterProjectsByBudgetYear(filterProjectsByWorkStage(filterProjectsByPackageType(filterProjectsByCategory(projects, category), packageType), workStage), budgetYear)
 }
 
 const getWeekNumber = (date: Date) => {

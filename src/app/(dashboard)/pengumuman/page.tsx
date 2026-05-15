@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { Topbar } from '@/components/layout/Topbar'
 import { Modal, ConfirmDialog, FormField, Input, Textarea, Select, EmptyState, ActionButtons } from '@/components/ui'
@@ -27,50 +27,26 @@ const KATEGORI_CFG = {
   umum:    { label: 'Umum', bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-200', icon: Megaphone },
 }
 
-const DUMMY_PENGUMUMAN: Pengumuman[] = [
-  {
-    id: 'p1',
-    judul: 'Rapat Koordinasi Monitoring Proyek Bulan April 2026',
-    isi: 'Diberitahukan kepada seluruh PPTK, PPK, dan Tim Pengawasan bahwa akan diadakan rapat koordinasi monitoring proyek pada:\n\nHari/Tanggal: Senin, 4 Mei 2026\nWaktu: 09.00 WIB - Selesai\nTempat: Ruang Rapat Dinas PU Lantai 2\n\nAgenda: Review progress semua proyek, evaluasi deviasi, dan tindak lanjut masalah lapangan.\n\nKehadiran wajib bagi seluruh PPTK yang proyeknya mengalami deviasi > 10%.',
-    kategori: 'penting',
-    ditujukan: ['ppk', 'pptk', 'tim_pengawasan', 'konsultan_pengawasan'],
-    dibuatOleh: 'Ir. Ahmad Fauzi, MT',
-    dibuatOlehId: 'u1',
-    pinned: true,
-    createdAt: '2026-04-26T08:00:00',
-    updatedAt: '2026-04-26T08:00:00',
-  },
-  {
-    id: 'p2',
-    judul: 'Pembaruan Prosedur Upload Foto Lapangan',
-    isi: 'Mulai 1 Mei 2026, seluruh foto lapangan yang diupload wajib memenuhi ketentuan berikut:\n\n1. Foto diambil langsung dari kamera HP dengan GPS aktif\n2. Minimal 3 foto per laporan harian\n3. Watermark otomatis akan ditambahkan sistem\n4. Foto yang tidak memiliki metadata GPS akan ditolak sistem\n\nHarap segera perbarui aplikasi SIMONPRO ke versi terbaru.',
-    kategori: 'info',
-    ditujukan: ['pptk', 'tim_pengawasan', 'konsultan_pengawasan'],
-    dibuatOleh: 'Admin Sistem',
-    dibuatOlehId: 'u9',
-    pinned: false,
-    createdAt: '2026-04-24T10:00:00',
-    updatedAt: '2026-04-24T10:00:00',
-  },
-  {
-    id: 'p3',
-    judul: 'Peringatan: 3 Proyek dengan Deviasi Kritis',
-    isi: 'Berdasarkan monitoring terkini, terdapat 3 proyek dengan status KRITIS:\n\n1. Peningkatan Jalan Soekarno Hatta (deviasi -15%)\n2. Pembangunan Box Culvert Sei Dumai (deviasi -12%)\n3. Normalisasi Parit Sungai Binti (deviasi -12%)\n\nKepada PPTK terkait: segera lakukan percepatan pelaksanaan dan laporkan rencana aksi paling lambat 30 April 2026 kepada PPK.',
-    kategori: 'warning',
-    ditujukan: ['pptk', 'ppk', 'pimpinan'],
-    dibuatOleh: 'Ir. Ahmad Fauzi, MT',
-    dibuatOlehId: 'u1',
-    pinned: true,
-    createdAt: '2026-04-23T14:00:00',
-    updatedAt: '2026-04-23T14:00:00',
-  },
-]
-
 const EMPTY_FORM = { judul: '', isi: '', kategori: 'info' as any, ditujukan: [] as string[], pinned: false }
+
+async function apiJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options?.headers || {}),
+    },
+  })
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(data?.message || 'Request gagal')
+  }
+  return response.json()
+}
 
 export default function PengumumanPage() {
   const { currentUser } = useAppStore()
-  const [announcements, setAnnouncements] = useState<Pengumuman[]>(DUMMY_PENGUMUMAN)
+  const [announcements, setAnnouncements] = useState<Pengumuman[]>([])
   const [showForm, setShowForm] = useState(false)
   const [viewTarget, setViewTarget] = useState<Pengumuman | null>(null)
   const [editTarget, setEditTarget] = useState<Pengumuman | null>(null)
@@ -78,9 +54,24 @@ export default function PengumumanPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [search, setSearch] = useState('')
   const [filterKat, setFilterKat] = useState('all')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   const canManage = canAccess(currentUser?.role || 'pptk', 'approve_laporan')
   const f = (field: string, val: any) => setForm(prev => ({ ...prev, [field]: val }))
+
+  useEffect(() => {
+    let alive = true
+    apiJson<Pengumuman[]>('/api/announcements')
+      .then(data => {
+        if (alive) setAnnouncements(data)
+      })
+      .catch(error => toast.error(error instanceof Error ? error.message : 'Gagal mengambil pengumuman'))
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+    return () => { alive = false }
+  }, [])
 
   const filtered = announcements
     .filter(a => {
@@ -101,29 +92,46 @@ export default function PengumumanPage() {
     setShowForm(true)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.judul.trim()) return toast.error('Judul pengumuman wajib diisi')
     if (!form.isi.trim()) return toast.error('Isi pengumuman wajib diisi')
-    const now = new Date().toISOString()
-    if (editTarget) {
-      setAnnouncements(prev => prev.map(a => a.id === editTarget.id
-        ? { ...a, ...form, updatedAt: now } : a))
-      toast.success('Pengumuman diperbarui')
-    } else {
-      const newA: Pengumuman = {
-        id: `p${Date.now()}`, ...form,
-        dibuatOleh: currentUser!.name, dibuatOlehId: currentUser!.id,
-        createdAt: now, updatedAt: now,
+
+    try {
+      setSaving(true)
+      if (editTarget) {
+        const updated = await apiJson<Pengumuman>(`/api/announcements/${editTarget.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(form),
+        })
+        setAnnouncements(prev => prev.map(a => a.id === editTarget.id ? updated : a))
+        toast.success('Pengumuman diperbarui ke database')
+      } else {
+        const created = await apiJson<Pengumuman>('/api/announcements', {
+          method: 'POST',
+          body: JSON.stringify(form),
+        })
+        setAnnouncements(prev => [created, ...prev])
+        toast.success('Pengumuman dipublikasikan ke database')
       }
-      setAnnouncements(prev => [newA, ...prev])
-      toast.success('Pengumuman berhasil dipublikasikan')
+      setShowForm(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan pengumuman')
+    } finally {
+      setSaving(false)
     }
-    setShowForm(false)
   }
 
-  const togglePin = (id: string) => {
-    setAnnouncements(prev => prev.map(a => a.id === id ? { ...a, pinned: !a.pinned } : a))
-    toast.success('Status pin diperbarui')
+  const togglePin = async (announcement: Pengumuman) => {
+    try {
+      const updated = await apiJson<Pengumuman>(`/api/announcements/${announcement.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ...announcement, pinned: !announcement.pinned }),
+      })
+      setAnnouncements(prev => prev.map(a => a.id === announcement.id ? updated : a))
+      toast.success('Status pin diperbarui')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal memperbarui pin')
+    }
   }
 
   const ROLE_LABELS: Record<string, string> = {
@@ -171,8 +179,10 @@ export default function PengumumanPage() {
         </div>
 
         {/* List */}
-        {filtered.length === 0 ? (
-          <EmptyState icon={<Megaphone className="w-8 h-8" />} title="Tidak ada pengumuman" description="Pengumuman akan muncul di sini" />
+        {loading ? (
+          <EmptyState icon={<Megaphone className="w-8 h-8" />} title="Memuat pengumuman" description="Mengambil data dari database" />
+        ) : filtered.length === 0 ? (
+          <EmptyState icon={<Megaphone className="w-8 h-8" />} title="Tidak ada pengumuman" description="Pengumuman database akan muncul di sini" />
         ) : (
           <div className="space-y-3">
             {filtered.map(a => {
@@ -207,7 +217,7 @@ export default function PengumumanPage() {
                           </button>
                           {canManage && (
                             <>
-                              <button onClick={() => togglePin(a.id)} className={`px-2.5 py-1 rounded-lg text-[10px] font-medium ${a.pinned ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                              <button onClick={() => togglePin(a)} className={`px-2.5 py-1 rounded-lg text-[10px] font-medium ${a.pinned ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                                 {a.pinned ? 'Unpin' : 'Pin'}
                               </button>
                               <ActionButtons small onEdit={() => openEdit(a)} onDelete={() => setDeleteTarget(a)} />
@@ -230,8 +240,8 @@ export default function PengumumanPage() {
         size="lg"
         footer={<div className="flex gap-3">
           <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-600 font-medium">Batal</button>
-          <button onClick={handleSubmit} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700">
-            {editTarget ? 'Simpan Perubahan' : 'Publikasikan'}
+          <button onClick={handleSubmit} disabled={saving} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-60">
+            {saving ? 'Menyimpan...' : editTarget ? 'Simpan Perubahan' : 'Publikasikan'}
           </button>
         </div>}>
         <div className="space-y-4">
@@ -298,7 +308,18 @@ export default function PengumumanPage() {
       </Modal>
 
       <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}
-        onConfirm={() => { setAnnouncements(prev => prev.filter(a => a.id !== deleteTarget!.id)); toast.success('Pengumuman dihapus'); setDeleteTarget(null) }}
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          try {
+            await apiJson<{ ok: true }>(`/api/announcements/${deleteTarget.id}`, { method: 'DELETE' })
+            setAnnouncements(prev => prev.filter(a => a.id !== deleteTarget.id))
+            toast.success('Pengumuman dihapus dari database')
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Gagal menghapus pengumuman')
+          } finally {
+            setDeleteTarget(null)
+          }
+        }}
         title="Hapus Pengumuman?" message={`"${deleteTarget?.judul}" akan dihapus permanen.`} />
     </>
   )

@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { Topbar } from '@/components/layout/Topbar'
 import { Modal, ConfirmDialog, FormField, Input, Select, EmptyState, ActionButtons } from '@/components/ui'
@@ -29,17 +29,8 @@ const JENIS_CFG = {
   lainnya:      { label: 'Lainnya', bg: 'bg-slate-100', text: 'text-slate-600', icon: File },
 }
 
-const DUMMY_DOKUMEN: Dokumen[] = [
-  { id:'d1', nama:'Surat Perjanjian Kontrak PU-DRN-001', jenis:'kontrak', proyekId:'p1', proyekNama:'Rehabilitasi Drainase Jl. Sultan Syarif Kasim', ukuran:'2.4 MB', url:'#', uploadedBy:'Ir. Ahmad Fauzi, MT', uploadedAt:'2026-02-01T08:00:00', keterangan:'Kontrak utama dengan PT. Bangun Riau Jaya' },
-  { id:'d2', nama:'Gambar Desain Drainase Detail', jenis:'gambar', proyekId:'p1', proyekNama:'Rehabilitasi Drainase Jl. Sultan Syarif Kasim', ukuran:'15.2 MB', url:'#', uploadedBy:'CV. Konsultan Mitra Riau', uploadedAt:'2026-01-25T10:00:00', keterangan:'Gambar detail struktur dan dimensi drainase' },
-  { id:'d3', nama:'Spesifikasi Teknis U-Ditch Precast', jenis:'spesifikasi', proyekId:'p1', proyekNama:'Rehabilitasi Drainase Jl. Sultan Syarif Kasim', ukuran:'1.8 MB', url:'#', uploadedBy:'CV. Konsultan Mitra Riau', uploadedAt:'2026-01-26T10:00:00', keterangan:'Spesifikasi material U-Ditch K-350' },
-  { id:'d4', nama:'SK Penetapan PPTK TA 2026', jenis:'sk', proyekId:'p2', proyekNama:'Peningkatan Jalan Soekarno Hatta', ukuran:'0.5 MB', url:'#', uploadedBy:'Admin Sistem', uploadedAt:'2026-01-10T08:00:00', keterangan:'SK Kepala Dinas No. 001/PU/2026' },
-  { id:'d5', nama:'Laporan Bulanan Maret 2026', jenis:'laporan', proyekId:'p1', proyekNama:'Rehabilitasi Drainase Jl. Sultan Syarif Kasim', ukuran:'3.1 MB', url:'#', uploadedBy:'Siti Rahmawati, ST', uploadedAt:'2026-04-01T09:00:00', keterangan:'Laporan bulanan progress bulan Maret' },
-]
-
 export default function DokumenPage() {
   const { projects, currentUser } = useAppStore()
-  const [dokumen, setDokumen] = useState<Dokumen[]>(DUMMY_DOKUMEN)
   const [showForm, setShowForm] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Dokumen | null>(null)
   const [search, setSearch] = useState('')
@@ -50,6 +41,93 @@ export default function DokumenPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   const canManage = canAccess(currentUser?.role || 'pptk', 'upload_rab')
+
+  const dokumen = useMemo<Dokumen[]>(() => {
+    const items: Dokumen[] = []
+    projects.forEach(project => {
+      if (project.kontraktor || project.nilaiKontrak) {
+        items.push({
+          id: `${project.id}-kontrak`,
+          nama: `Data kontrak ${project.kode}`,
+          jenis: 'kontrak',
+          proyekId: project.id,
+          proyekNama: project.nama,
+          ukuran: '-',
+          url: '#',
+          uploadedBy: project.ppk || 'Sistem',
+          uploadedAt: project.updatedAt,
+          keterangan: `Penyedia: ${project.kontraktor || '-'}, nilai: Rp ${Number(project.nilaiKontrak || 0).toLocaleString('id-ID')}`,
+        })
+      }
+
+      project.rabList.forEach(rab => {
+        items.push({
+          id: rab.id,
+          nama: `RAB ${project.kode} versi ${rab.versi}`,
+          jenis: 'laporan',
+          proyekId: project.id,
+          proyekNama: project.nama,
+          ukuran: '-',
+          url: '#',
+          uploadedBy: rab.uploadedBy,
+          uploadedAt: rab.uploadedAt,
+          keterangan: rab.catatan || `Total anggaran Rp ${rab.totalAnggaran.toLocaleString('id-ID')}`,
+        })
+      })
+
+      project.laporanHarian.forEach(laporan => {
+        laporan.foto.forEach((foto, index) => {
+          items.push({
+            id: foto.id,
+            nama: `Foto laporan ${project.kode} #${index + 1}`,
+            jenis: 'laporan',
+            proyekId: project.id,
+            proyekNama: project.nama,
+            ukuran: '-',
+            url: foto.url,
+            uploadedBy: foto.uploadedBy || laporan.userName,
+            uploadedAt: foto.uploadedAt,
+            keterangan: foto.keterangan || laporan.uraianPekerjaan,
+          })
+        })
+      })
+
+      project.surveys.forEach(survey => {
+        survey.foto.forEach((foto, index) => {
+          items.push({
+            id: foto.id,
+            nama: `Foto survey ${project.kode} #${index + 1}`,
+            jenis: 'gambar',
+            proyekId: project.id,
+            proyekNama: project.nama,
+            ukuran: '-',
+            url: foto.url,
+            uploadedBy: foto.uploadedBy || survey.userName,
+            uploadedAt: foto.uploadedAt,
+            keterangan: foto.keterangan || survey.kondisiEksisting,
+          })
+        })
+      })
+
+      project.masalah.forEach(masalah => {
+        masalah.foto.forEach((foto, index) => {
+          items.push({
+            id: foto.id,
+            nama: `Foto masalah ${project.kode} #${index + 1}`,
+            jenis: 'laporan',
+            proyekId: project.id,
+            proyekNama: project.nama,
+            ukuran: '-',
+            url: foto.url,
+            uploadedBy: foto.uploadedBy || masalah.dilaporkanOlehName,
+            uploadedAt: foto.uploadedAt,
+            keterangan: foto.keterangan || masalah.judul,
+          })
+        })
+      })
+    })
+    return items.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
+  }, [projects])
 
   const filtered = dokumen.filter(d => {
     const mQ = d.nama.toLowerCase().includes(search.toLowerCase()) || d.keterangan.toLowerCase().includes(search.toLowerCase())
@@ -70,25 +148,11 @@ export default function DokumenPage() {
     if (!form.proyekId) return toast.error('Pilih proyek')
     if (!selectedFile && !form.nama) return toast.error('Upload file terlebih dahulu')
 
-    const proyek = projects.find(p => p.id === form.proyekId)
-    const newDoc: Dokumen = {
-      id: `d${Date.now()}`, ...form,
-      proyekNama: proyek?.nama || '',
-      ukuran: selectedFile ? `${(selectedFile.size / 1024 / 1024).toFixed(1)} MB` : '0 MB',
-      url: selectedFile ? URL.createObjectURL(selectedFile) : '#',
-      uploadedBy: currentUser!.name,
-      uploadedAt: new Date().toISOString(),
-    }
-    setDokumen(prev => [newDoc, ...prev])
-    toast.success('Dokumen berhasil diupload')
+    toast.error('Upload dokumen umum perlu endpoint penyimpanan file. Saat ini arsip diambil otomatis dari RAB, laporan, survey, masalah, dan kontrak yang sudah tersimpan.')
     setShowForm(false)
     setSelectedFile(null)
     setForm({ nama:'', jenis:'lainnya', proyekId:'', keterangan:'' })
   }
-
-  const groupedByJenis = Object.entries(JENIS_CFG).map(([jenis, cfg]) => ({
-    jenis, cfg, count: dokumen.filter(d => d.jenis === jenis).length
-  })).filter(g => g.count > 0)
 
   return (
     <>
@@ -131,7 +195,7 @@ export default function DokumenPage() {
 
         {/* Document list */}
         {filtered.length === 0 ? (
-          <EmptyState icon={<FileArchive className="w-8 h-8" />} title="Tidak ada dokumen" description="Upload dokumen proyek untuk menyimpan arsip digital" />
+          <EmptyState icon={<FileArchive className="w-8 h-8" />} title="Tidak ada dokumen" description="Dokumen akan muncul otomatis dari data proyek yang tersimpan di database" />
         ) : (
           <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
             <table className="w-full text-xs">
@@ -171,6 +235,12 @@ export default function DokumenPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           <a href={d.url} target="_blank" rel="noopener noreferrer"
+                            onClick={event => {
+                              if (d.url === '#') {
+                                event.preventDefault()
+                                toast.error('File fisik belum tersedia. Data ini berasal dari database proyek.')
+                              }
+                            }}
                             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Download">
                             <Download className="w-3.5 h-3.5" />
                           </a>
@@ -244,8 +314,8 @@ export default function DokumenPage() {
       </Modal>
 
       <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}
-        onConfirm={() => { setDokumen(prev => prev.filter(d => d.id !== deleteTarget!.id)); toast.success('Dokumen dihapus'); setDeleteTarget(null) }}
-        title="Hapus Dokumen?" message={`"${deleteTarget?.nama}" akan dihapus permanen dari sistem.`} />
+        onConfirm={() => { toast.error('Dokumen ini bersumber dari data proyek. Hapus data asalnya dari laporan/RAB/survey/masalah terkait.'); setDeleteTarget(null) }}
+        title="Hapus Dokumen?" message={`"${deleteTarget?.nama}" berasal dari data proyek yang tersimpan di database.`} />
     </>
   )
 }

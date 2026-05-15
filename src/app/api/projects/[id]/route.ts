@@ -61,6 +61,46 @@ export async function PATCH(
       },
     })
 
+    if (body.kontraktor || body.nomorKontrak || body.nilaiKontrak != null || body.tanggalMulai || body.tanggalSelesai) {
+      const latestKontrak = await tx.kontrak.findFirst({
+        where: { paketId: id },
+        orderBy: { createdAt: 'desc' },
+      })
+      const nomorKontrak = String(body.nomorKontrak || latestKontrak?.nomorKontrak || `K-${existing.kodePaket}-${Date.now()}`)
+      const nilaiKontrak = Number(body.nilaiKontrak ?? latestKontrak?.nilaiKontrak ?? existing.nilaiKontrak ?? 0)
+      const tglMulai = body.tanggalMulai ? new Date(body.tanggalMulai) : latestKontrak?.tglMulai || existing.tglMulai || new Date()
+      const tglSelesai = body.tanggalSelesai ? new Date(body.tanggalSelesai) : latestKontrak?.tglSelesai || existing.tglSelesai || new Date()
+      const penyedia = String(body.kontraktor || latestKontrak?.penyedia || '-')
+
+      if (latestKontrak) {
+        await tx.kontrak.update({
+          where: { id: latestKontrak.id },
+          data: {
+            nomorKontrak,
+            nilaiKontrak,
+            tglKontrak: body.tanggalTtd ? new Date(body.tanggalTtd) : latestKontrak.tglKontrak,
+            tglMulai,
+            tglSelesai,
+            penyedia,
+            keterangan: body.catatan ?? latestKontrak.keterangan,
+          },
+        })
+      } else if (nilaiKontrak > 0 || penyedia !== '-') {
+        await tx.kontrak.create({
+          data: {
+            paketId: id,
+            nomorKontrak,
+            nilaiKontrak,
+            tglKontrak: body.tanggalTtd ? new Date(body.tanggalTtd) : new Date(),
+            tglMulai,
+            tglSelesai,
+            penyedia,
+            keterangan: body.catatan || null,
+          },
+        })
+      }
+    }
+
     if (body.assignedUsers) {
       await tx.paketAssignment.deleteMany({ where: { paketId: id } })
       if (assignedUsers.length) {

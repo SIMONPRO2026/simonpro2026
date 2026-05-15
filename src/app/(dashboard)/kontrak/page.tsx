@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { Topbar } from '@/components/layout/Topbar'
 import { Modal, ConfirmDialog, FormField, Input, Select, EmptyState, ActionButtons } from '@/components/ui'
@@ -30,17 +30,10 @@ const STATUS_CFG = {
   terminasi: { label: 'Terminasi', bg: 'bg-red-100', text: 'text-red-700' },
 }
 
-const DUMMY_KONTRAK: Kontrak[] = [
-  { id:'k1', nomorKontrak:'027/SP/PU-DRN/2026', proyekId:'p1', proyekNama:'Rehabilitasi Drainase Jl. Sultan Syarif Kasim', kontraktor:'PT. Bangun Riau Jaya', nilaiKontrak:2750000000, tanggalTtd:'2026-01-31', tanggalMulai:'2026-02-01', tanggalSelesai:'2026-07-31', jaminanPelaksanaan:137500000, jaminanUangMuka:275000000, status:'aktif', catatan:'Kontrak pengadaan jasa konstruksi' },
-  { id:'k2', nomorKontrak:'027/SP/PU-JLN/2026', proyekId:'p2', proyekNama:'Peningkatan Jalan Soekarno Hatta', kontraktor:'PT. Karya Dumai Mandiri', nilaiKontrak:5050000000, tanggalTtd:'2026-01-14', tanggalMulai:'2026-01-15', tanggalSelesai:'2026-06-30', jaminanPelaksanaan:252500000, jaminanUangMuka:505000000, status:'aktif', catatan:'Kontrak peningkatan jalan' },
-  { id:'k3', nomorKontrak:'027/SP/PU-BOX/2026', proyekId:'p3', proyekNama:'Pembangunan Box Culvert Sei Dumai', kontraktor:'CV. Bersama Maju', nilaiKontrak:2980000000, tanggalTtd:'2026-02-14', tanggalMulai:'2026-02-15', tanggalSelesai:'2026-08-15', jaminanPelaksanaan:149000000, jaminanUangMuka:298000000, status:'aktif', catatan:'Kontrak pembangunan box culvert' },
-]
-
 const EMPTY_FORM = { nomorKontrak:'', proyekId:'', kontraktor:'', nilaiKontrak:0, tanggalTtd:'', tanggalMulai:'', tanggalSelesai:'', jaminanPelaksanaan:0, jaminanUangMuka:0, status:'draft' as any, catatan:'' }
 
 export default function KontrakPage() {
-  const { projects, currentUser } = useAppStore()
-  const [kontrakList, setKontrakList] = useState<Kontrak[]>(DUMMY_KONTRAK)
+  const { projects, currentUser, updateProject } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [viewTarget, setViewTarget] = useState<Kontrak | null>(null)
   const [editTarget, setEditTarget] = useState<Kontrak | null>(null)
@@ -48,9 +41,31 @@ export default function KontrakPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [saving, setSaving] = useState(false)
 
   const canManage = canAccess(currentUser?.role || 'pptk', 'approve_laporan')
   const f = (field: string, val: any) => setForm(prev => ({...prev, [field]: val}))
+
+  const kontrakList = useMemo<Kontrak[]>(() => projects
+    .filter(project => Boolean(project.nilaiKontrak || project.kontraktor))
+    .map(project => {
+      const nilaiKontrak = Number(project.nilaiKontrak || project.anggaran || 0)
+      return {
+        id: project.id,
+        nomorKontrak: project.kode,
+        proyekId: project.id,
+        proyekNama: project.nama,
+        kontraktor: project.kontraktor || '-',
+        nilaiKontrak,
+        tanggalTtd: project.tanggalMulai,
+        tanggalMulai: project.tanggalMulai,
+        tanggalSelesai: project.tanggalSelesai,
+        jaminanPelaksanaan: Math.round(nilaiKontrak * 0.05),
+        jaminanUangMuka: Math.round(nilaiKontrak * 0.1),
+        status: project.status === 'selesai' ? 'selesai' : 'aktif',
+        catatan: `Data kontrak tersinkron dengan proyek ${project.kode}.`,
+      }
+    }), [projects])
 
   const filtered = kontrakList.filter(k => {
     const mQ = k.nomorKontrak.toLowerCase().includes(search.toLowerCase()) || k.kontraktor.toLowerCase().includes(search.toLowerCase()) || k.proyekNama.toLowerCase().includes(search.toLowerCase())
@@ -67,21 +82,30 @@ export default function KontrakPage() {
     setShowForm(true)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.nomorKontrak.trim()) return toast.error('Nomor kontrak wajib diisi')
     if (!form.proyekId) return toast.error('Pilih proyek')
     if (!form.kontraktor.trim()) return toast.error('Nama kontraktor wajib diisi')
     if (form.nilaiKontrak <= 0) return toast.error('Nilai kontrak harus > 0')
 
-    const proyek = projects.find(p => p.id === form.proyekId)
-    if (editTarget) {
-      setKontrakList(prev => prev.map(k => k.id === editTarget.id ? { ...k, ...form, proyekNama: proyek?.nama || k.proyekNama } : k))
-      toast.success('Kontrak diperbarui')
-    } else {
-      setKontrakList(prev => [{ id:`k${Date.now()}`, ...form, proyekNama: proyek?.nama || '' }, ...prev])
-      toast.success('Kontrak berhasil disimpan')
+    try {
+      setSaving(true)
+      await updateProject(form.proyekId, {
+        kontraktor: form.kontraktor,
+        nilaiKontrak: Number(form.nilaiKontrak),
+        tanggalMulai: form.tanggalMulai,
+        tanggalSelesai: form.tanggalSelesai,
+        nomorKontrak: form.nomorKontrak,
+        tanggalTtd: form.tanggalTtd,
+        catatan: form.catatan,
+      } as any)
+      toast.success(editTarget ? 'Kontrak diperbarui ke database' : 'Kontrak disimpan ke database')
+      setShowForm(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan kontrak')
+    } finally {
+      setSaving(false)
     }
-    setShowForm(false)
   }
 
   return (
@@ -187,8 +211,8 @@ export default function KontrakPage() {
         size="lg"
         footer={<div className="flex gap-3">
           <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-600 font-medium">Batal</button>
-          <button onClick={handleSubmit} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700">
-            {editTarget ? 'Simpan Perubahan' : 'Simpan Kontrak'}
+          <button onClick={handleSubmit} disabled={saving} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-60">
+            {saving ? 'Menyimpan...' : editTarget ? 'Simpan Perubahan' : 'Simpan Kontrak'}
           </button>
         </div>}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -262,8 +286,8 @@ export default function KontrakPage() {
       </Modal>
 
       <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}
-        onConfirm={() => { setKontrakList(prev => prev.filter(k => k.id !== deleteTarget!.id)); toast.success('Kontrak dihapus'); setDeleteTarget(null) }}
-        title="Hapus Kontrak?" message={`Kontrak "${deleteTarget?.nomorKontrak}" akan dihapus permanen.`} />
+        onConfirm={() => { toast.error('Hapus kontrak permanen belum dibuka. Edit nilai/penyedia kontrak dari proyek.'); setDeleteTarget(null) }}
+        title="Hapus Kontrak?" message={`Kontrak "${deleteTarget?.nomorKontrak}" tersinkron dengan data proyek. Penghapusan permanen memerlukan modul dokumen kontrak terpisah.`} />
     </>
   )
 }

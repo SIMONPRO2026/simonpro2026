@@ -38,6 +38,7 @@ export default function MasalahPage() {
   const [filterJenisProyek, setFilterJenisProyek] = useState('all')
   const [filterTahap, setFilterTahap] = useState('all')
   const [search, setSearch] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   const canCreate = canAccess(currentUser?.role || 'pptk', 'create_masalah')
   const canResolve = canAccess(currentUser?.role || 'pptk', 'resolve_masalah')
@@ -69,7 +70,7 @@ export default function MasalahPage() {
     setShowForm(true)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.proyekId) return toast.error('Pilih proyek')
     if (!form.judul.trim()) return toast.error('Judul masalah wajib diisi')
     if (!form.deskripsi.trim()) return toast.error('Deskripsi wajib diisi')
@@ -82,17 +83,33 @@ export default function MasalahPage() {
       resolvedAt: form.status === 'resolved' ? new Date().toISOString() : undefined,
     }
 
-    if (editTarget) { updateMasalah(editTarget.proyekId, editTarget.id, data); toast.success('Masalah diperbarui') }
-    else { addMasalah(form.proyekId, data); toast.success('Masalah berhasil dilaporkan') }
-    setShowForm(false)
+    try {
+      setSubmitting(true)
+      if (editTarget) {
+        await updateMasalah(editTarget.proyekId, editTarget.id, data)
+        toast.success('Masalah diperbarui ke database')
+      } else {
+        await addMasalah(form.proyekId, data)
+        toast.success('Masalah berhasil dilaporkan ke database')
+      }
+      setShowForm(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan masalah')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const quickUpdateStatus = (m: any, status: string) => {
-    updateMasalah(m.proyekId, m.id, {
-      status: status as any,
-      resolvedAt: status === 'resolved' ? new Date().toISOString() : undefined
-    })
-    toast.success(`Status diubah ke: ${STATUS_CFG[status as keyof typeof STATUS_CFG]?.label}`)
+  const quickUpdateStatus = async (m: any, status: string) => {
+    try {
+      await updateMasalah(m.proyekId, m.id, {
+        status: status as any,
+        resolvedAt: status === 'resolved' ? new Date().toISOString() : undefined
+      })
+      toast.success(`Status diubah ke: ${STATUS_CFG[status as keyof typeof STATUS_CFG]?.label}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal memperbarui status masalah')
+    }
   }
 
   const summaryStats = [
@@ -233,8 +250,8 @@ export default function MasalahPage() {
         size="md"
         footer={<div className="flex gap-3">
           <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-600 font-medium">Batal</button>
-          <button onClick={handleSubmit} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700">
-            {editTarget ? 'Simpan Perubahan' : 'Laporkan Masalah'}
+          <button onClick={handleSubmit} disabled={submitting} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-60">
+            {submitting ? 'Menyimpan...' : editTarget ? 'Simpan Perubahan' : 'Laporkan Masalah'}
           </button>
         </div>}>
         <div className="space-y-4">

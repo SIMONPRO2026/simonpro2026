@@ -23,6 +23,7 @@ export default function RABPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ rab: RAB; proyekId: string } | null>(null)
   const [items, setItems] = useState<RABItem[]>([{ no: '1', uraian: '', satuan: 'Ls', volume: 1, hargaSatuan: 0, total: 0 }])
   const [catatan, setCatatan] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   const canManage = canAccess(currentUser?.role || 'pptk', 'upload_rab')
   const canApprove = canAccess(currentUser?.role || 'pptk', 'approve_rab')
@@ -68,7 +69,7 @@ export default function RABPage() {
 
   const totalNilaiRAB = items.reduce((s, i) => s + i.total, 0)
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (items.some(i => !i.uraian.trim())) return toast.error('Semua uraian pekerjaan harus diisi')
     if (items.some(i => i.total <= 0)) return toast.error('Volume dan harga satuan harus diisi')
 
@@ -77,19 +78,30 @@ export default function RABPage() {
       uploadedBy: currentUser!.name, uploadedAt: new Date().toISOString(),
       status: 'draft' as const, catatan, versi: '', versionNumber: 0,
     }
-    if (editTarget) {
-      updateRAB(formProyekId, editTarget.id, data)
-      toast.success('RAB berhasil diperbarui')
-    } else {
-      addRAB(formProyekId, data)
-      toast.success('RAB berhasil ditambahkan')
+    try {
+      setSubmitting(true)
+      if (editTarget) {
+        await updateRAB(formProyekId, editTarget.id, data)
+        toast.success('RAB berhasil diperbarui ke database')
+      } else {
+        await addRAB(formProyekId, data)
+        toast.success('RAB berhasil ditambahkan ke database')
+      }
+      setShowForm(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan RAB')
+    } finally {
+      setSubmitting(false)
     }
-    setShowForm(false)
   }
 
-  const handleApprove = (proyekId: string, rabId: string) => {
-    updateRAB(proyekId, rabId, { status: 'approved' })
-    toast.success('RAB disetujui')
+  const handleApprove = async (proyekId: string, rabId: string) => {
+    try {
+      await updateRAB(proyekId, rabId, { status: 'approved' })
+      toast.success('RAB disetujui ke database')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyetujui RAB')
+    }
   }
 
   return (
@@ -258,8 +270,8 @@ export default function RABPage() {
             <div className="text-sm font-bold text-blue-700">Total: {formatCurrency(totalNilaiRAB)}</div>
             <div className="flex gap-3">
               <button onClick={() => setShowForm(false)} className="px-6 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-600 font-medium">Batal</button>
-              <button onClick={handleSubmit} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700">
-                {editTarget ? 'Simpan Perubahan' : 'Simpan RAB'}
+              <button onClick={handleSubmit} disabled={submitting} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-60">
+                {submitting ? 'Menyimpan...' : editTarget ? 'Simpan Perubahan' : 'Simpan RAB'}
               </button>
             </div>
           </div>

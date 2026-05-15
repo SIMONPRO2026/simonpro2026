@@ -125,7 +125,6 @@ export default function LaporanPage() {
     if (photos.length < 1) return toast.error('Minimal 1 foto wajib diupload')
     if (!uraian.trim()) return toast.error('Uraian pekerjaan wajib diisi')
     setSubmitting(true)
-    await new Promise(r => setTimeout(r, 500))
     const data = {
       proyekId: selectedProyekId, tanggal: new Date().toISOString().split('T')[0],
       userId: currentUser!.id, userName: currentUser!.name,
@@ -134,9 +133,20 @@ export default function LaporanPage() {
       foto: photos.map((url, i) => ({ id: genId(), url, uploadedAt: new Date().toISOString(), uploadedBy: currentUser!.name, keterangan: `Foto ${i+1}`, koordinat: gps })),
       disetujui: false,
     }
-    if (editTarget) { updateLaporan(editTarget.proyekId, editTarget.id, data); toast.success('Laporan diperbarui') }
-    else { addLaporan(selectedProyekId, data); toast.success('Laporan berhasil disimpan!') }
-    setSubmitting(false); setShowForm(false)
+    try {
+      if (editTarget) {
+        await updateLaporan(editTarget.proyekId, editTarget.id, data)
+        toast.success('Laporan diperbarui ke database')
+      } else {
+        await addLaporan(selectedProyekId, data)
+        toast.success('Laporan berhasil disimpan ke database')
+      }
+      setShowForm(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan laporan')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const cuacaOpts = [{ val:'cerah',label:'Cerah',e:'☀️' },{ val:'berawan',label:'Berawan',e:'⛅' },{ val:'hujan_ringan',label:'Hujan Ringan',e:'🌦️' },{ val:'hujan_lebat',label:'Hujan Lebat',e:'⛈️' }]
