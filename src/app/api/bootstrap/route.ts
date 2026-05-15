@@ -124,5 +124,9 @@ export async function GET() {
     users: users.map(mapDbUser),
     projects: [...pakets.map(mapDbPaket), ...projects.map(mapLegacyProject)],
     auditLogs: auditLogs.map(mapDbAuditLog),
+  }, {
+    headers: {
+      'Cache-Control': 'no-store, max-age=0',
+    },
   })
 }

@@ -19,6 +19,7 @@ export default function DashboardLayout({
   const { isLoggedIn, sidebarOpen, hydrateFromDatabase, setAuthUser } = useAppStore()
 
   const [mounted, setMounted] = useState(false)
+  const [bootstrapped, setBootstrapped] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -36,20 +37,42 @@ export default function DashboardLayout({
 
     let active = true
 
-    fetch('/api/bootstrap')
+    const syncData = async () => {
+      fetch('/api/bootstrap', { cache: 'no-store' })
       .then((response) => {
         if (!response.ok) throw new Error('Gagal memuat data SIMONPRO')
         return response.json()
       })
       .then((data) => {
-        if (active) hydrateFromDatabase(data)
+        if (active) {
+          hydrateFromDatabase(data)
+          setBootstrapped(true)
+        }
       })
       .catch(() => {
         if (active) setAuthUser(null)
       })
+    }
+
+    syncData()
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') syncData()
+    }, 10000)
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') syncData()
+    }
+
+    const handleFocus = () => syncData()
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
 
     return () => {
       active = false
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
     }
   }, [hydrateFromDatabase, mounted, setAuthUser, status])
 
@@ -73,14 +96,14 @@ export default function DashboardLayout({
     )
   }
 
-  if (status !== 'authenticated' || !isLoggedIn) {
+  if (status !== 'authenticated' || !isLoggedIn || !bootstrapped) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-100">
         <div className="text-center">
           <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 animate-pulse">
             <span className="text-white text-xl font-bold">M</span>
           </div>
-          <p className="text-slate-400 text-sm">Mengalihkan ke halaman login...</p>
+          <p className="text-slate-400 text-sm">{status === 'authenticated' ? 'Memuat data database...' : 'Mengalihkan ke halaman login...'}</p>
         </div>
       </div>
     )
