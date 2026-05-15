@@ -15,7 +15,6 @@ const EMPTY_FORM = {
   tahun: new Date().getFullYear(),
   program: '',
   subProgram: '',
-  namaPekerjaan: '',
   kode: '', nama: '', lokasi: '', kecamatan: '',
   anggaran: 0, nilaiKontrak: 0,
   status: 'belum_survey' as ProjectStatus,
@@ -71,7 +70,6 @@ export default function ProyekPage() {
       tahun: (p as any).tahun || new Date().getFullYear(),
       program: (p as any).program || '',
       subProgram: (p as any).subProgram || '',
-      namaPekerjaan: (p as any).namaPekerjaan || p.nama,
       anggaran: p.anggaran, nilaiKontrak: p.nilaiKontrak || 0,
       status: p.status, progressFisik: p.progressFisik, progressKeuangan: p.progressKeuangan,
       kategoriPekerjaan: (p as any).kategoriPekerjaan || 'lelang',
@@ -266,9 +264,6 @@ export default function ProyekPage() {
           </FormField>
           <FormField label="Sub Program / Kegiatan" required>
             <Input placeholder="Pembangunan / Rehabilitasi Drainase" value={(form as any).subProgram || ''} onChange={e => f('subProgram' as any, e.target.value)} />
-          </FormField>
-          <FormField label="Nama Pekerjaan" required>
-            <Input placeholder="Nama pekerjaan sesuai DPA/SPK" value={(form as any).namaPekerjaan || form.nama} onChange={e => f('namaPekerjaan' as any, e.target.value)} />
           </FormField>
           <FormField label="Kode Proyek" required>
             <Input placeholder="PU-DRN-001/2026" value={form.kode} onChange={e => f('kode', e.target.value)} />

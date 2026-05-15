@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import { useAppStore } from '@/store/useAppStore'
 import Sidebar from '@/components/layout/Sidebar'
 import MobileNav from '@/components/layout/MobileNav'
+import { ProjectAiAssistant } from '@/components/ai/ProjectAiAssistant'
 import { Toaster } from 'react-hot-toast'
 
 export default function DashboardLayout({
@@ -142,6 +143,7 @@ export default function DashboardLayout({
       <Sidebar />
 
       <MobileNav />
+      <ProjectAiAssistant />
 
       <main
         className="app-main transition-all duration-300 min-h-screen pb-20 md:pb-0"
@@ -152,6 +154,11 @@ export default function DashboardLayout({
       >
 
         {children}
+        <div className="px-5 pb-24 pt-4 text-center text-[11px] leading-relaxed text-slate-400 md:pb-6">
+          <div>SIMONPRO v1.0</div>
+          <div>© 2026 Budi Legawan, ST</div>
+          <div>All Rights Reserved</div>
+        </div>
 
       </main>
 

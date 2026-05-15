@@ -115,9 +115,11 @@ export default function LoginPage() {
             </form>
           </div>
 
-          <p className="mt-6 text-center text-xs text-blue-200">
-            &copy; 2026 Dinas Pekerjaan Umum Kota Dumai
-          </p>
+          <div className="mt-6 text-center text-xs leading-relaxed text-blue-200">
+            <div>SIMONPRO v1.0</div>
+            <div>© 2026 Budi Legawan, ST</div>
+            <div>All Rights Reserved</div>
+          </div>
         </div>
       </main>
     </div>
