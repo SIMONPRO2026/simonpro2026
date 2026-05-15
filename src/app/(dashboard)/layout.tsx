@@ -57,7 +57,7 @@ export default function DashboardLayout({
     syncData()
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === 'visible') syncData()
-    }, 10000)
+    }, 2000)
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') syncData()
