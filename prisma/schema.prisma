@@ -1,0 +1,1089 @@
+// =============================================================================
+// SIMONPRO — PRISMA SCHEMA ENTERPRISE
+// Versi: 2.0 | Revisi: 09 Mei 2026
+// Strategi: ADDITIVE — semua model existing dipertahankan, hanya ditambah yang baru
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// ✅ EXISTING — DIPERTAHANKAN + DIPERLUAS
+// Model User, Role enum, AuditLog, Chat tetap ada.
+// Hanya ditambah field baru dan relasi baru.
+// =============================================================================
+
+// ─────────────────────────────────────────────
+// ENUM: Role — diperluas dari existing
+// Existing: SUPER_ADMIN, ADMIN, PPK, PPTK, KABID, DIREKSI_TEKNIS,
+//           KONSULTAN_PENGAWAS, TIM_PENGAWAS, KONSULTAN_PERENCANA,
+//           TIM_PERENCANA, PIMPINAN, KONTRAKTOR
+// Tambahan baru: KEPALA_DINAS, TIM_SURVEYOR, AUDITOR
+// ─────────────────────────────────────────────
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  KEPALA_DINAS       // ← BARU: ganti PIMPINAN yang ambigu
+  PIMPINAN           // ← DIPERTAHANKAN untuk backward compat
+  PPK
+  PPTK
+  KABID
+  DIREKSI_TEKNIS
+  KONSULTAN_PERENCANA
+  KONSULTAN_PENGAWAS
+  TIM_PERENCANA      // ← DIPERTAHANKAN
+  TIM_SURVEYOR       // ← BARU: role rutin
+  TIM_PENGAWAS
+  KONTRAKTOR
+  AUDITOR            // ← BARU: read-only semua data
+}
+
+// ─────────────────────────────────────────────
+// MODEL: User — diperluas dari existing
+// ─────────────────────────────────────────────
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(KONTRAKTOR)
+  isActive  Boolean  @default(true)
+  // ← BARU: field tambahan PU
+  nip       String?  @unique
+  jabatan   String?
+  nomorHp   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Existing relations
+  auditLogs     AuditLog[]
+  sentChats     Chat[]     @relation("SentChats")
+  receivedChats Chat[]     @relation("ReceivedChats")
+
+  // ← BARU: relasi baru
+  paketAsPpk          Paket[]           @relation("PaketPpk")
+  paketAsPptk         Paket[]           @relation("PaketPptk")
+  paketAssignments    PaketAssignment[]
+  laporanHarianBaru   LaporanHarianBaru[]
+  catatanPengawasan   CatatanPengawasan[]
+  surveyBaru          SurveyBaru[]
+  approvals           Approval[]
+  uploadedDocuments   Document[]
+  notifikasi          Notifikasi[]
+  chatBaru            ChatBaru[]
+  regulationDocuments RegulationDocument[]
+
+  @@index([email])
+  @@index([role])
+}
+
+// ─────────────────────────────────────────────
+// EXISTING ENUMS — semua dipertahankan
+// ─────────────────────────────────────────────
+enum StatusProyek {
+  AKTIF
+  SELESAI
+  TERLAMBAT
+  DIHENTIKAN
+}
+
+enum StatusMasalah {
+  OPEN
+  PROSES
+  SELESAI
+}
+
+enum Prioritas {
+  RENDAH
+  SEDANG
+  TINGGI
+  KRITIS
+}
+
+// ─────────────────────────────────────────────
+// EXISTING MODEL: Proyek — DIPERTAHANKAN 100%
+// Tidak ada field yang dihapus.
+// ─────────────────────────────────────────────
+model Proyek {
+  id               String       @id @default(cuid())
+  kodeProyek       String       @unique
+  namaProyek       String
+  lokasi           String
+  latitude         Float?
+  longitude        Float?
+  nilaiKontrak     Float
+  tanggalMulai     DateTime
+  tanggalSelesai   DateTime
+  status           StatusProyek @default(AKTIF)
+  progresRencana   Float        @default(0)
+  progresRealisasi Float        @default(0)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // Existing relations — semua dipertahankan
+  laporanHarian   LaporanHarian[]
+  laporanMingguan LaporanMingguan[]
+  laporanBulanan  LaporanBulanan[]
+  kurvaS          KurvaS[]
+  chats           Chat[]
+  auditLogs       AuditLog[]
+  masalah         Masalah[]
+}
+
+// ─────────────────────────────────────────────
+// EXISTING MODELS — semua dipertahankan 100%
+// LaporanHarian, LaporanMingguan, LaporanBulanan,
+// KurvaS, Masalah, Chat, AuditLog
+// ─────────────────────────────────────────────
+model LaporanHarian {
+  id         String   @id @default(cuid())
+  proyekId   String
+  tanggal    DateTime
+  cuaca      String
+  progres    Float
+  keterangan String
+  foto       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  proyek     Proyek   @relation(fields: [proyekId], references: [id])
+}
+
+model LaporanMingguan {
+  id              String   @id @default(cuid())
+  proyekId        String
+  mingguKe        Int
+  tahun           Int
+  tanggalMulai    DateTime
+  tanggalSelesai  DateTime
+  progresAwal     Float
+  progresAkhir    Float
+  totalProgres    Float
+  cuacaDominan    String?
+  kendalaMinggu   String?
+  rencanaMinggu   String?
+  realisasiMinggu String?
+  keterangan      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  proyek          Proyek   @relation(fields: [proyekId], references: [id])
+}
+
+model LaporanBulanan {
+  id                String   @id @default(cuid())
+  proyekId          String
+  bulan             Int
+  tahun             Int
+  progresAwal       Float
+  progresAkhir      Float
+  totalProgres      Float
+  nilaiPrestasi     Float?
+  kendalaUtama      String?
+  tindakLanjut      String?
+  rencanaBulanDepan String?
+  keterangan        String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  proyek            Proyek   @relation(fields: [proyekId], references: [id])
+}
+
+model KurvaS {
+  id        String   @id @default(cuid())
+  proyekId  String
+  minggu    Int
+  rencana   Float
+  realisasi Float
+  createdAt DateTime @default(now())
+  proyek    Proyek   @relation(fields: [proyekId], references: [id])
+}
+
+model Masalah {
+  id        String        @id @default(cuid())
+  proyekId  String
+  judul     String
+  deskripsi String
+  status    StatusMasalah @default(OPEN)
+  prioritas Prioritas     @default(SEDANG)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  proyek    Proyek        @relation(fields: [proyekId], references: [id])
+}
+
+model Chat {
+  id         String   @id @default(cuid())
+  proyekId   String?
+  senderId   String
+  receiverId String
+  pesan      String
+  dibaca     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  proyek     Proyek?  @relation(fields: [proyekId], references: [id])
+  sender     User     @relation("SentChats", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedChats", fields: [receiverId], references: [id])
+}
+
+// ─────────────────────────────────────────────
+// EXISTING MODEL: AuditLog — DIPERLUAS (bukan diganti)
+// Tambah field baru tanpa hapus field lama
+// ─────────────────────────────────────────────
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  proyekId  String?
+  aksi      String
+  detail    String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  // ← BARU: field audit enterprise
+  paketId     String?
+  entityType  String?  // paket/laporan/rab/survey/user/standar
+  entityId    String?
+  beforeData  Json?    // snapshot sebelum perubahan
+  afterData   Json?    // snapshot sesudah perubahan
+  userAgent   String?
+  sessionId   String?
+  userRole    String?  // snapshot role saat aksi
+
+  user   User    @relation(fields: [userId], references: [id])
+  proyek Proyek? @relation(fields: [proyekId], references: [id])
+  paket  Paket?  @relation(fields: [paketId], references: [id])
+
+  @@index([userId])
+  @@index([paketId])
+  @@index([entityType, entityId])
+  @@index([createdAt(sort: Desc)])
+}
+
+// =============================================================================
+// ← BARU: HIERARKI PROGRAM → PAKET (Package-Centric Architecture)
+// =============================================================================
+
+// ─────────────────────────────────────────────
+// Tahun Anggaran
+// ─────────────────────────────────────────────
+model TahunAnggaran {
+  id        String   @id @default(cuid())
+  tahun     Int      @unique
+  isAktif   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  programs Program[]
+}
+
+// ─────────────────────────────────────────────
+// Program → Kegiatan → SubKegiatan → Paket
+// ─────────────────────────────────────────────
+model Program {
+  id              String        @id @default(cuid())
+  tahunAnggaranId String
+  kode            String
+  nama            String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  tahunAnggaran TahunAnggaran @relation(fields: [tahunAnggaranId], references: [id])
+  kegiatan      Kegiatan[]
+
+  @@unique([tahunAnggaranId, kode])
+}
+
+model Kegiatan {
+  id        String   @id @default(cuid())
+  programId String
+  kode      String
+  nama      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  program      Program       @relation(fields: [programId], references: [id])
+  subKegiatan  SubKegiatan[]
+
+  @@unique([programId, kode])
+}
+
+model SubKegiatan {
+  id            String   @id @default(cuid())
+  kegiatanId    String
+  kode          String
+  nama          String
+  paguAnggaran  Decimal  @default(0) @db.Decimal(15, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  kegiatan Kegiatan @relation(fields: [kegiatanId], references: [id])
+  paket    Paket[]
+
+  @@unique([kegiatanId, kode])
+}
+
+// ─────────────────────────────────────────────
+// ENUM: Jenis & Status Paket
+// ─────────────────────────────────────────────
+enum PaketJenis {
+  TENDER
+  PL
+  RUTIN
+  KONSULTAN_PERENCANA
+  KONSULTAN_PENGAWAS
+}
+
+enum PaketStatus {
+  INISIASI
+  SURVEY_LAPANGAN
+  PENGUKURAN
+  REKOMENDASI_TEKNIS
+  SHOP_DRAWING
+  PENYUSUNAN_RAB
+  DOKUMEN_LELANG
+  PROSES_LELANG
+  PENETAPAN_PENYEDIA
+  KONTRAK_SPMK
+  KURVA_S
+  PELAKSANAAN
+  ADDENDUM
+  AS_BUILT_DRAWING
+  PHO
+  MASA_PEMELIHARAAN
+  FHO
+  BAST
+  SELESAI_ARSIP
+  DIHENTIKAN
+}
+
+enum HealthStatus {
+  ON_TRACK
+  WARNING
+  KRITIS
+}
+
+enum KategoriFisik {
+  JALAN
+  DRAINASE
+  GEDUNG
+  JEMBATAN
+  IRIGASI
+  LAINNYA
+}
+
+// ─────────────────────────────────────────────
+// PAKET — inti package-centric architecture
+// ─────────────────────────────────────────────
+model Paket {
+  id              String       @id @default(cuid())
+  subKegiatanId   String
+  kodePaket       String       @unique
+  namaPaket       String
+  jenis           PaketJenis
+  kategoriFisik   KategoriFisik?
+  lokasi          String?
+  kecamatan       String?
+  koordinat       Json?        // {lat, lng, accuracy}
+  paguAnggaran    Decimal      @default(0) @db.Decimal(15, 2)
+  nilaiKontrak    Decimal?     @db.Decimal(15, 2)
+  status          PaketStatus  @default(INISIASI)
+  health          HealthStatus @default(ON_TRACK)
+  progressFisik   Decimal      @default(0) @db.Decimal(5, 2)
+  progressKeuangan Decimal     @default(0) @db.Decimal(5, 2)
+  deviasi         Decimal      @default(0) @db.Decimal(5, 2)
+  tglMulai        DateTime?
+  tglSelesai      DateTime?
+  tglSelesaiAktual DateTime?
+  ppkId           String?
+  pptkId          String?
+  ahspVersionId   String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  subKegiatan  SubKegiatan      @relation(fields: [subKegiatanId], references: [id])
+  ppk          User?            @relation("PaketPpk", fields: [ppkId], references: [id])
+  pptk         User?            @relation("PaketPptk", fields: [pptkId], references: [id])
+  ahspVersion  AhspMaster?      @relation(fields: [ahspVersionId], references: [id])
+
+  assignments         PaketAssignment[]
+  kontrak             Kontrak[]
+  laporanHarianBaru   LaporanHarianBaru[]
+  laporanMingguanBaru LaporanMingguanBaru[]
+  laporanBulananBaru  LaporanBulananBaru[]
+  kurvaSBaru          KurvaSBaru[]
+  catatanPengawasan   CatatanPengawasan[]
+  surveyBaru          SurveyBaru[]
+  rab                 Rab[]
+  shopDrawing         ShopDrawing[]
+  asBuiltDrawing      AsBuiltDrawing[]
+  masalahBaru         MasalahBaru[]
+  serahTerima         SerahTerima[]
+  documents           Document[]
+  approvals           Approval[]
+  auditLogs           AuditLog[]
+  chatBaru            ChatBaru[]
+  notifikasi          Notifikasi[]
+
+  @@index([jenis])
+  @@index([status])
+  @@index([ppkId])
+  @@index([pptkId])
+}
+
+// ─────────────────────────────────────────────
+// Paket Assignment — package-centric RBAC
+// ─────────────────────────────────────────────
+model PaketAssignment {
+  id          String   @id @default(cuid())
+  paketId     String
+  userId      String
+  rolePaket   Role
+  namaPerusahaan String? // untuk kontraktor/konsultan
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  paket Paket @relation(fields: [paketId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([paketId, userId])
+  @@index([paketId])
+  @@index([userId])
+}
+
+// =============================================================================
+// ← BARU: KONTRAK & ADDENDUM
+// =============================================================================
+
+model Kontrak {
+  id              String   @id @default(cuid())
+  paketId         String
+  nomorKontrak    String   @unique
+  nilaiKontrak    Decimal  @db.Decimal(15, 2)
+  tglKontrak      DateTime
+  tglMulai        DateTime
+  tglSelesai      DateTime
+  penyedia        String
+  fileUrl         String?
+  keterangan      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  paket     Paket      @relation(fields: [paketId], references: [id])
+  addendum  Addendum[]
+}
+
+model Addendum {
+  id           String   @id @default(cuid())
+  kontrakId    String
+  versi        Int
+  nomorAddendum String
+  nilaiBaru    Decimal? @db.Decimal(15, 2)
+  tglMulaiBaru DateTime?
+  tglSelesaiBaru DateTime?
+  alasan       String
+  fileUrl      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  kontrak Kontrak @relation(fields: [kontrakId], references: [id])
+}
+
+// =============================================================================
+// ← BARU: LAPORAN & MONITORING berbasis paketId
+// Model lama (LaporanHarian, dll) tetap ada untuk proyek legacy.
+// Model baru menggunakan paketId.
+// =============================================================================
+
+model LaporanHarianBaru {
+  id               String   @id @default(cuid())
+  paketId          String
+  userId           String
+  tanggal          DateTime
+  cuaca            String
+  progressFisik    Decimal  @db.Decimal(5, 2)
+  progressKumulatif Decimal @db.Decimal(5, 2)
+  uraianPekerjaan  String
+  volumeTerlaksana Json?    // {satuan, volume} per item pekerjaan
+  catatanKhusus    String?
+  disetujui        Boolean  @default(false)
+  disetujuiOleh    String?
+  disetujuiAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  paket Paket @relation(fields: [paketId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  foto  Foto[]
+
+  @@index([paketId, tanggal])
+}
+
+model LaporanMingguanBaru {
+  id              String   @id @default(cuid())
+  paketId         String
+  mingguKe        Int
+  tahun           Int
+  tanggalMulai    DateTime
+  tanggalSelesai  DateTime
+  progresAwal     Decimal  @db.Decimal(5, 2)
+  progresAkhir    Decimal  @db.Decimal(5, 2)
+  totalProgres    Decimal  @db.Decimal(5, 2)
+  cuacaDominan    String?
+  kendalaMinggu   String?
+  rencanaMinggu   String?
+  realisasiMinggu String?
+  keterangan      String?
+  status          ApprovalStatus @default(DRAFT)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  paket Paket @relation(fields: [paketId], references: [id])
+
+  @@unique([paketId, mingguKe, tahun])
+}
+
+model LaporanBulananBaru {
+  id                String   @id @default(cuid())
+  paketId           String
+  bulan             Int
+  tahun             Int
+  progresAwal       Decimal  @db.Decimal(5, 2)
+  progresAkhir      Decimal  @db.Decimal(5, 2)
+  totalProgres      Decimal  @db.Decimal(5, 2)
+  nilaiPrestasi     Decimal? @db.Decimal(15, 2)
+  kendalaUtama      String?
+  tindakLanjut      String?
+  rencanaBulanDepan String?
+  keterangan        String?
+  status            ApprovalStatus @default(DRAFT)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  paket Paket @relation(fields: [paketId], references: [id])
+
+  @@unique([paketId, bulan, tahun])
+}
+
+model KurvaSBaru {
+  id        String   @id @default(cuid())
+  paketId   String
+  mingguKe  Int
+  rencana   Decimal  @db.Decimal(5, 2)
+  realisasi Decimal  @db.Decimal(5, 2)
+  createdAt DateTime @default(now())
+
+  paket Paket @relation(fields: [paketId], references: [id])
+
+  @@unique([paketId, mingguKe])
+  @@index([paketId])
+}
+
+// =============================================================================
+// ← BARU: SURVEY berbasis paketId
+// =============================================================================
+
+model SurveyBaru {
+  id                String   @id @default(cuid())
+  paketId           String
+  userId            String
+  tanggal           DateTime
+  koordinat         Json?    // {lat, lng, accuracy}
+  kondisiEksisting  String
+  dimensi           Json?    // {panjang, lebar, tinggi}
+  material          String?
+  permasalahan      String?
+  rekomendasi       String?
+  status            ApprovalStatus @default(DRAFT)
+  catatanReviewer   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  paket Paket @relation(fields: [paketId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  foto  Foto[]
+
+  @@index([paketId])
+}
+
+// =============================================================================
+// ← BARU: CATATAN PENGAWASAN berbasis paketId
+// =============================================================================
+
+model CatatanPengawasan {
+  id           String   @id @default(cuid())
+  paketId      String
+  userId       String
+  tanggal      DateTime
+  deskripsi    String
+  rekomendasi  String?
+  status       String   @default("sesuai") // sesuai/perlu_perbaikan
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  paket Paket @relation(fields: [paketId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  foto  Foto[]
+
+  @@index([paketId])
+}
+
+// =============================================================================
+// ← BARU: RAB & ITEM berbasis paketId + integrasi TSE
+// =============================================================================
+
+enum ApprovalStatus {
+  DRAFT
+  SUBMITTED
+  REVIEWED
+  APPROVED
+  REJECTED
+  REVISION
+  FINAL
+}
+
+model Rab {
+  id            String         @id @default(cuid())
+  paketId       String
+  versi         Int            @default(1)
+  totalAnggaran Decimal        @db.Decimal(15, 2)
+  status        ApprovalStatus @default(DRAFT)
+  catatan       String?
+  ahspVersionId String?        // versi AHSP yang dipakai saat RAB dibuat
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  paket   Paket    @relation(fields: [paketId], references: [id])
+  items   RabItem[]
+
+  @@unique([paketId, versi])
+  @@index([paketId])
+}
+
+model RabItem {
+  id             String   @id @default(cuid())
+  rabId          String
+  urutan         Int
+  uraian         String
+  satuan         String
+  volume         Decimal  @db.Decimal(12, 3)
+  hargaSatuan    Decimal  @db.Decimal(15, 2)
+  total          Decimal  @db.Decimal(15, 2) // volume × hargaSatuan, computed di app
+  ahspId         String?  // ref ke AhspMaster jika dari katalog
+  workTemplateId String?  // ref ke WorkItemTemplateRow
+  sshSnapshot    Json?    // snapshot harga SSH/HSPK saat RAB dibuat (audit)
+  createdAt      DateTime @default(now())
+
+  rab         Rab                   @relation(fields: [rabId], references: [id])
+  ahsp        AhspMaster?           @relation(fields: [ahspId], references: [id])
+  workTemplate WorkItemTemplateRow? @relation(fields: [workTemplateId], references: [id])
+}
+
+// =============================================================================
+// ← BARU: DOKUMEN TEKNIS (Shop Drawing, As Built Drawing)
+// =============================================================================
+
+model ShopDrawing {
+  id          String         @id @default(cuid())
+  paketId     String
+  nomor       String
+  judul       String
+  revisi      Int            @default(0)
+  status      ApprovalStatus @default(DRAFT)
+  fileUrl     String?
+  approvedBy  String?
+  approvedAt  DateTime?
+  catatan     String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  paket Paket @relation(fields: [paketId], references: [id])
+
+  @@index([paketId])
+}
+
+model AsBuiltDrawing {
+  id          String         @id @default(cuid())
+  paketId     String
+  nomor       String
+  judul       String
+  status      ApprovalStatus @default(DRAFT)
+  fileUrl     String?
+  approvedBy  String?
+  approvedAt  DateTime?
+  catatan     String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  paket Paket @relation(fields: [paketId], references: [id])
+
+  @@index([paketId])
+}
+
+// =============================================================================
+// ← BARU: SERAH TERIMA (PHO, FHO, BAST)
+// =============================================================================
+
+enum SerahTerimaJenis {
+  PHO
+  FHO
+  BAST
+}
+
+model SerahTerima {
+  id        String           @id @default(cuid())
+  paketId   String
+  jenis     SerahTerimaJenis
+  tanggal   DateTime?
+  status    ApprovalStatus   @default(DRAFT)
+  fileUrl   String?
+  catatan   String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  paket Paket @relation(fields: [paketId], references: [id])
+
+  @@index([paketId])
+}
+
+// =============================================================================
+// ← BARU: MASALAH berbasis paketId
+// (Model Masalah lama tetap untuk Proyek legacy)
+// =============================================================================
+
+model MasalahBaru {
+  id                  String        @id @default(cuid())
+  paketId             String
+  judul               String
+  deskripsi           String
+  status              StatusMasalah @default(OPEN)
+  prioritas           Prioritas     @default(SEDANG)
+  dilaporkanOleh      String
+  solusi              String?
+  resolvedAt          DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  paket Paket @relation(fields: [paketId], references: [id])
+  foto  Foto[]
+
+  @@index([paketId, status])
+}
+
+// =============================================================================
+// ← BARU: APPROVAL ENGINE
+// =============================================================================
+
+enum ApprovalEntityType {
+  LAPORAN_HARIAN
+  LAPORAN_MINGGUAN
+  LAPORAN_BULANAN
+  RAB
+  SHOP_DRAWING
+  AS_BUILT_DRAWING
+  SURVEY
+  SERAH_TERIMA
+  KONTRAK
+  ADDENDUM
+}
+
+model Approval {
+  id          String             @id @default(cuid())
+  paketId     String
+  entityType  ApprovalEntityType
+  entityId    String
+  status      ApprovalStatus     @default(SUBMITTED)
+  approverId  String
+  catatan     String?
+  createdAt   DateTime           @default(now())
+
+  paket    Paket @relation(fields: [paketId], references: [id])
+  approver User  @relation(fields: [approverId], references: [id])
+
+  @@index([paketId])
+  @@index([entityType, entityId])
+  @@index([approverId])
+}
+
+// =============================================================================
+// ← BARU: FOTO — tabel terpisah, entitas fleksibel
+// =============================================================================
+
+model Foto {
+  id              String   @id @default(cuid())
+  entityType      String   // laporan_harian/survey/catatan/masalah
+  entityId        String
+  url             String
+  keterangan      String?
+  koordinat       Json?    // {lat, lng, accuracy}
+  uploadedBy      String
+  createdAt       DateTime @default(now())
+
+  // Relasi opsional ke masing-masing entitas
+  laporanHarian    LaporanHarianBaru? @relation(fields: [laporanHarianId], references: [id])
+  laporanHarianId  String?
+  survey           SurveyBaru?        @relation(fields: [surveyId], references: [id])
+  surveyId         String?
+  catatan          CatatanPengawasan? @relation(fields: [catatanId], references: [id])
+  catatanId        String?
+  masalahBaru      MasalahBaru?       @relation(fields: [masalahBaruId], references: [id])
+  masalahBaruId    String?
+
+  @@index([entityType, entityId])
+}
+
+// =============================================================================
+// ← BARU: DOKUMEN MANAJEMEN (upload umum per paket)
+// =============================================================================
+
+enum DocumentType {
+  KONTRAK
+  SPMK
+  PCM
+  MC
+  SHOP_DRAWING
+  MATERIAL_APPROVAL
+  BA
+  PHO
+  FHO
+  AS_BUILT_DRAWING
+  SURVEY
+  RAB
+  REGULASI
+  LAINNYA
+}
+
+model Document {
+  id           String         @id @default(cuid())
+  paketId      String
+  tipe         DocumentType
+  judul        String
+  fileUrl      String
+  versi        Int            @default(1)
+  status       ApprovalStatus @default(DRAFT)
+  uploadedById String
+  catatan      String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  paket      Paket @relation(fields: [paketId], references: [id])
+  uploadedBy User  @relation(fields: [uploadedById], references: [id])
+
+  @@index([paketId, tipe])
+}
+
+// =============================================================================
+// ← BARU: CHAT GROUP berbasis paketId
+// (Chat lama direct message tetap ada)
+// =============================================================================
+
+model ChatBaru {
+  id        String   @id @default(cuid())
+  paketId   String
+  userId    String
+  pesan     String
+  tipe      String   @default("text") // text/image/file
+  fileUrl   String?
+  createdAt DateTime @default(now())
+
+  paket Paket @relation(fields: [paketId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@index([paketId, createdAt(sort: Desc)])
+}
+
+// =============================================================================
+// ← BARU: NOTIFIKASI
+// =============================================================================
+
+model Notifikasi {
+  id        String   @id @default(cuid())
+  userId    String
+  paketId   String?
+  judul     String
+  isi       String
+  tipe      String   @default("info") // info/warning/success/danger
+  dibaca    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user  User   @relation(fields: [userId], references: [id])
+  paket Paket? @relation(fields: [paketId], references: [id])
+
+  @@index([userId, dibaca])
+}
+
+// =============================================================================
+// ← BARU: TECHNICAL STANDARD ENGINE (TSE)
+// =============================================================================
+
+// ─────────────────────────────────────────────
+// Regulation Sources & Documents
+// ─────────────────────────────────────────────
+model RegulationSource {
+  id          String   @id @default(cuid())
+  namaSumber  String
+  kategori    String   // ahsp/hspk/ssh/sni/regulasi/spesifikasi
+  url         String?
+  deskripsi   String?
+  statusAktif Boolean  @default(true)
+  autoSync    Boolean  @default(false) // untuk integrasi future
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  documents RegulationDocument[]
+}
+
+model RegulationDocument {
+  id              String    @id @default(cuid())
+  sourceId        String
+  judul           String
+  tahun           Int
+  versi           String?
+  nomorDokumen    String?
+  filePdf         String?
+  externalUrl     String?
+  status          String    @default("aktif") // aktif/arsip/dicabut
+  tanggalBerlaku  DateTime?
+  tanggalBerakhir DateTime?
+  uploadedById    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  source     RegulationSource @relation(fields: [sourceId], references: [id])
+  uploadedBy User?            @relation(fields: [uploadedById], references: [id])
+  ahspMaster AhspMaster[]
+
+  @@index([sourceId, tahun])
+}
+
+// ─────────────────────────────────────────────
+// Standard Categories & Technical Standards
+// ─────────────────────────────────────────────
+model StandardCategory {
+  id   String @id @default(cuid())
+  nama String
+  kode String @unique
+
+  technicalStandards TechnicalStandard[]
+}
+
+model TechnicalStandard {
+  id             String   @id @default(cuid())
+  categoryId     String
+  namaStandar    String
+  nomorDokumen   String?
+  tahun          Int
+  versi          String?
+  instansi       String?
+  statusAktif    Boolean  @default(true)
+  isDefault      Boolean  @default(false)
+  filePdf        String?
+  linkDownload   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  category StandardCategory @relation(fields: [categoryId], references: [id])
+}
+
+// ─────────────────────────────────────────────
+// AHSP Master & Components
+// ─────────────────────────────────────────────
+model AhspMaster {
+  id           String   @id @default(cuid())
+  kodeAnalisa  String   @unique
+  uraian       String
+  satuan       String
+  kategori     String   // bina_marga/cipta_karya/sda
+  subKategori  String?
+  tahun        Int
+  versi        String?
+  statusAktif  Boolean  @default(true)
+  isDefault    Boolean  @default(false)
+  sourceDocId  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sourceDoc   RegulationDocument? @relation(fields: [sourceDocId], references: [id])
+  components  AhspComponent[]
+  rabItems    RabItem[]
+  templateRows WorkItemTemplateRow[]
+  paket       Paket[]
+
+  @@index([kategori, tahun])
+}
+
+model AhspComponent {
+  id           String   @id @default(cuid())
+  ahspMasterId String
+  jenis        String   // material/upah/alat/overhead
+  kodeItem     String?  // kode SSH/HSPK yang dirujuk
+  uraian       String
+  koefisien    Decimal  @db.Decimal(10, 6)
+  satuan       String
+  hargaSatuan  Decimal? @db.Decimal(15, 2) // nullable, diambil dari ssh_master saat kalkulasi
+  createdAt    DateTime @default(now())
+
+  ahspMaster AhspMaster @relation(fields: [ahspMasterId], references: [id])
+}
+
+// ─────────────────────────────────────────────
+// SSH Master (Standar Harga Satuan)
+// ─────────────────────────────────────────────
+model SshMaster {
+  id        String   @id @default(cuid())
+  kode      String
+  uraian    String
+  satuan    String
+  harga     Decimal  @db.Decimal(15, 2)
+  tahun     Int
+  kota      String   @default("Kota Dumai")
+  createdAt DateTime @default(now())
+
+  @@unique([kode, tahun])
+  @@index([tahun])
+}
+
+// ─────────────────────────────────────────────
+// HSPK Master (Harga Satuan Pokok Kegiatan)
+// ─────────────────────────────────────────────
+model HspkMaster {
+  id        String   @id @default(cuid())
+  kode      String
+  uraian    String
+  satuan    String
+  harga     Decimal  @db.Decimal(15, 2)
+  tahun     Int
+  kota      String   @default("Kota Dumai")
+  createdAt DateTime @default(now())
+
+  @@unique([kode, tahun])
+  @@index([tahun])
+}
+
+// ─────────────────────────────────────────────
+// Work Item Templates — preset RAB
+// ─────────────────────────────────────────────
+model WorkItemTemplate {
+  id            String   @id @default(cuid())
+  namaPekerjaan String
+  kategori      String   // drainase/jalan/gedung/jembatan
+  subKategori   String?
+  deskripsi     String?
+  statusAktif   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  rows WorkItemTemplateRow[]
+}
+
+model WorkItemTemplateRow {
+  id           String   @id @default(cuid())
+  templateId   String
+  urutan       Int
+  uraian       String
+  satuan       String
+  ahspId       String?
+  bobotDefault Decimal? @db.Decimal(5, 2) // bobot persen default di kurva S
+  createdAt    DateTime @default(now())
+
+  template WorkItemTemplate @relation(fields: [templateId], references: [id])
+  ahsp     AhspMaster?      @relation(fields: [ahspId], references: [id])
+  rabItems RabItem[]
+}
